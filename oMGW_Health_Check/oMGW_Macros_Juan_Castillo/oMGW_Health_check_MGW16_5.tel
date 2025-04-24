@@ -1,0 +1,323 @@
+
+function oMGW_Health_16_5_Pre_and_Post_check()
+  string filename,filename2,PCTime,Tel,A,B,FU[],UNIT[];
+  string PRE,line="",fecha="",DD,MM,YYYY,temp;
+  integer handle,handle2,x,y; 
+  
+  // Esta macro pertenece a Juan Castillo, solicitar su uso 
+  pause(0,"Before executing this macro Login in");
+  Tel="MGWVEN02"; ask(Tel,"INGRESE ssh oMGW ? "); Tel=strupper(Tel); device(Tel);
+  PCTime = getpctime(1); strscan(PCTime,"%s %s",A,B);  print("INICIO DE MACRO PARA %s: %s\n",Tel,PCTime); 
+  B=strreplace(B,":","-"); PCTime = A + "_" + B; promptcheck(NONE);    
+  PRE="PRE"; ask(PRE,"PRE OR POST CHECK (PRE/POST) ?? "); PRE=strupper(PRE);
+  filename= Tel + "_oMGW_" + PRE + "_" + PCTime + "_.TXT" ; filename2= "RESUME_" + Tel + "_oMGW16_5_" + PRE + "_" + PCTime + "_.TXT" ;
+  handle = fileopen(filename,NEW); fileclose(handle); logenable(LOG_ENABLE_ALL); logset(filename,APPEND); handle2 = fileopen(filename2,NEW); 
+  ask(fecha,"ALARMA FORMATO DD-MM-YYYY.HR:MN:SG ?");
+  if(fecha=="") A=strreplace(A,"-"," "); strscan(A,"%s %s %s",YYYY,MM,DD); A=DD + "-" + MM+ "-" +YYYY; fecha=A+".00:00:00"; endif
+  
+  //Alarms
+  tx("fsclish -c 'show alarm alarm-count'\r"); delay(1000);
+  tx("fsclish -c 'show alarm active-summary brief'\r"); delay(1000);
+  tx("fsclish -c 'show alarm active-summary'\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(1000);
+  tx("fsclish -c 'set cli built-in output structured' -c 'show alarm active'\r"); delay(3000);
+  tx("fsclish -c 'history'\r"); delay(1000);
+  tx("fsclish -c 'set cli built-in output structured' -c 'show alarm history filter-by from-event-time %s'\r",fecha); pause(60);
+  tx("fsclish -c 'show alarm blocking-rule all'\r"); delay(1000);  
+  tx("fsclish -c 'show has filter node state availability managed-object */*'"); pause(15);
+  tx("fsclish -c 'show tools system-status brief list'\r"); pause(70);
+  x=0;
+  while(getline(line,"'ENA   OK' OR 'LMP-' OR 'AHUB3-A'"))  
+    x++; fileprint(handle2,line); strscan(line,"%s",FU[x]); FU[x]=strreplace(FU[x],"/",""); print("%s\n",FU[x]);
+  endwhile  
+  
+  //Ping
+  for(y=1;y<=x;y++)
+    tx("ping -c 1 -i 0 %s\r",FU[y]); delay(2000); 
+    if(getline(line," '1 received'")) print("%s OK\n",FU[y]); fileprint(handle2,line); 
+    else send(chr(3)); print("%s FAIL!!!\n",FU[y]); endif 
+  endfor
+  
+  //Memory
+  for(y=1;y<=x;y++)
+    UNIT[y]=strreplace(FU[y],"-"," "); strscan(UNIT[y],"%s",UNIT[y]); 
+    if(UNIT[y]=="CLA") tx("ssh -4q -o StrictHostKeyChecking=no %s free -m\r",FU[y]); 
+      if(getline(line," 'Mem:'")) print("%s %s",FU[y],line); fileprint(handle2,line); endif delay(2000);
+    elseif(UNIT[y]=="ISU") tx("ssh -4q -o StrictHostKeyChecking=no %s free -m\r",FU[y]); delay(2000);
+      if(getline(line," 'Mem:'")) print("%s %s",FU[y],line); fileprint(handle2,line); endif delay(2000);
+    elseif(UNIT[y]=="TCU") tx("ssh -4q -o StrictHostKeyChecking=no %s free -m\r",FU[y]); delay(2000);
+      if(getline(line," 'Mem:'")) print("%s %s",FU[y],line); fileprint(handle2,line); endif delay(2000);
+    endif
+  endfor
+  
+  //F.U. 
+  tx("fsclish -c 'show has summary managed-object /'\r"); delay(1000);
+  tx("fsclish -c 'show has state managed-object /*'\r"); delay(1000);
+  tx("ilclifunit -v\r"); delay(1000);
+  tx("ilclifunit -c\r"); delay(1000);
+  tx("fsclish -c 'show has functional-unit comp-addr-info'\r"); delay(1000);
+  tx("fsclish -c 'show has functional-unit unit-type-info'\r"); delay(1000);
+  tx("fsclish -c 'show has functional-unit unit-info show-mode verbose'\r"); delay(2000);
+  
+  //HDD
+  tx("smartctl --all /dev/sda\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(1000);
+  tx("df\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(1000); 
+  tx("df -h /mnt/backup/\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(1000);           
+  tx("vgs\r"); delay(1000);
+  tx("lvs\r"); delay(2000);
+
+  //HWR
+  tx("fsclish -c 'show hardware inventory list brief'\r"); delay(1000);
+  tx("fsclish -c 'show hardware state list'\r"); pause(60);
+    while(getline(line))
+      strscan(line,"%s %s %s %s",temp,temp,temp,temp); if(temp<>"available") print(line); fileprint(handle2,line);  endif
+    endwhile 
+  
+  tx("fsclish -c 'show sw-manage list'\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(5000);
+  tx("fsclish -c 'show sw-manage current all'\r"); pause(12);
+
+  tx("fsclish -c 'show mgw common'\r"); delay(1000);
+  tx("fsclish -c 'show license target-id'\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(1000);
+  tx("fsclish -c 'show license all'\r"); delay(1000);
+  tx("fsclish -c 'show license feature-mgmt all'\r"); delay(1000);
+  tx("fsclish -c 'show license feature-mgmt usage all table'\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(1000);
+  tx("fsclish -c 'show troubleshooting user-plane all-context mode 1'\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(1000);
+
+  tx("fsclish -c 'show tdm pdh et-state'\r"); delay(1000);
+  tx("fsclish -c 'show tdm pdh et-configuration'\r"); delay(1000);
+  tx("fsclish -c 'show tdm pdh letgr'\r"); delay(1000);
+  tx("fsclish -c 'show tdm pdh letgr-state'\r"); delay(1000);
+
+  tx("fsclish -c 'show tdm sdh set-state'\r"); delay(1000);
+  tx("fsclish -c 'show tdm sdh pgr'\r"); delay(1000);
+  tx("fsclish -c 'show tdm sdh hierarchy'\r"); delay(1000);
+
+  tx("ip route\r"); delay(1000);
+  tx("ip route show table all\r"); delay(1000);
+  tx("fsclish -c 'show routing node CLA-0 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node CLA-0 static-route config'\r"); delay(1000);
+
+  tx("fsclish -c 'show routing node CLA-1 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node CLA-1 static-route config'\r"); delay(1000);
+
+  tx("fsclish -c 'show routing node ISU-0 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node ISU-0 static-route config'\r"); delay(1000);;
+
+  tx("fsclish -c 'show routing node ISU-1 route'\r"); delay(1000);;
+  tx("fsclish -c 'show routing node ISU-1 static-route config'\r"); delay(1000);;
+
+  tx("fsclish -c 'show routing node ISU-2 route'\r"); delay(1000);;
+  tx("fsclish -c 'show routing node ISU-2 static-route config'\r"); delay(1000);;
+
+  tx("fsclish -c 'show routing node ISU-3 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node ISU-3 static-route config'\r"); delay(1000);
+
+  tx("fsclish -c 'show routing node ISU-4 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node ISU-4 static-route config'\r"); delay(1000);
+
+  tx("fsclish -c 'show routing node ISU-5 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node ISU-5 static-route config'\r"); delay(1000);
+
+  tx("fsclish -c 'show routing node IPNI1P-0 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node IPNI1P-0 static-route config'\r"); delay(1000);
+
+  tx("fsclish -c 'show routing node IPNI1P-1 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node IPNI1P-1 static-route config'\r"); delay(1000);
+
+  tx("fsclish -c 'show routing node IPNI1P-2 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node IPNI1P-2 static-route config'\r"); delay(1000);
+
+  tx("fsclish -c 'show routing node IPNI1P-3 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node IPNI1P-3 static-route config'\r"); delay(1000);
+
+  tx("fsclish -c 'show networking address'\r"); delay(1000);
+  tx("fsclish -c 'show networking address'\r"); delay(1000);
+  tx("fsclish -c 'show networking bond'\r"); delay(1000);
+
+  tx("fsclish -c 'show networking-service ntp'\r"); delay(1000);
+  tx("fsclish -c 'show networking link-state-detector'\r"); delay(1000);
+
+  // MEAS
+  tx("fsclish -c 'show stats m-type info all'\r"); delay(1000);
+  tx("fsclish -c 'show stats m-job all'\r"); delay(1000);
+  tx("fsclish -c 'show stats obj-list all'\r"); delay(1000);
+  tx("fsclish -c 'show stats t-job all'\r"); delay(1000);
+  tx("fspm9cli agents\r"); delay(1000);
+  tx("ilnascli --unit omu ls\r"); delay(1000);
+  tx("ilnascli --unit OMU lp mpty_statistics_as\r"); delay(1000);
+  tx("ls -l /opt/nsn/SS_DP9/plans/\r"); delay(1000);
+  tx("ls -l /mnt/sysimg/opt/nsn/SS_ILStatistics/etc\r"); delay(1000);
+
+  //Routing
+  tx("fsclish -c 'show tdm circuitgroup all'\r"); delay(1000); //fsclish -c 'show tdm circuitgroup crct cgr cgr-num 1-3071'
+
+  // SIGNALLING
+  tx("fsclish -c 'show signaling sccp connections'\r"); delay(1000);
+  tx("fsclish -c 'show signaling service-access-point all'\r"); delay(1000);
+  tx("fsclish -c 'show signaling ss7 association all'\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(1000);
+  tx("fsclish -c 'show signaling ss7 own-point-code all'\r"); delay(1000);
+  tx("fsclish -c 'show signaling ss7 remote-as all'\r"); delay(1000);
+
+  // VMGW
+  tx("fsclish -c 'show vmgw mgw mod 3'\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(1000);
+  tx("fsclish -c 'show vmgw mgw mod 0'\r"); delay(1000);
+
+  // SYNCH
+  tx("fsclish -c 'show mgw synchronization clock-distribution'\r"); delay(1000);
+  tx("fsclish -c 'show mgw synchronization inputreference'\r"); delay(1000);
+  tx("fsclish -c 'show mgw synchronization  clock-chaining'\r"); delay(1000);
+  tx("fsclish -c 'show mgw synchronization all'\r"); delay(1000);
+
+  // SNAPSHOT
+  tx("fsclish -c 'show snapshot list'\r"); delay(10000);
+  tx("fsclish -c 'show snapshot listall'\r");delay(10000);
+  tx("fsclish -c 'show snapshot current-startup'\r");delay(10000);
+  tx("fsclish -c 'show snapshot currentall-startup'\r");delay(10000);
+
+  // Shelf Manager 1
+  tx("ssh SM-1 clia shelfaddress\r");delay(10000);
+  tx("ssh SM-1 clia shmstatus\r");delay(10000);
+  tx("ssh SM-1 clia showunhealthy\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(15000);
+  tx("ssh SM-1 clia board\r"); delay(10000);
+  tx("ssh SM-1 clia fans\r"); delay(10000);
+  tx("ssh SM-1 clia shelf fans_state\r"); delay(10000);
+  tx("ssh SM-1 clia alarm info\r"); delay(10000);
+  tx("ssh SM-1 clia shelf cooling_state\r"); delay(10000);
+
+  // Shelf Manager 2
+  tx("ssh SM-2 clia shelfaddress\r"); delay(10000);
+  tx("ssh SM-2 clia shmstatus\r"); delay(10000);
+  tx("ssh SM-2 clia showunhealthy\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(15000);
+  tx("ssh SM-2 clia board\r"); delay(10000);
+  tx("ssh SM-2 clia fans\r"); delay(10000);
+  tx("ssh SM-2 clia shelf fans_state\r"); delay(10000);
+  tx("ssh SM-2 clia alarm info\r"); delay(10000);
+  tx("ssh SM-2 clia shelf cooling_state\r"); delay(10000);
+
+  // Shelf Manager 3
+  tx("ssh SM-3 clia shelfaddress\r"); delay(10000);
+  tx("ssh SM-3 clia shmstatus\r"); delay(10000);
+  tx("ssh SM-3 clia showunhealthy\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(10000);
+  tx("ssh SM-3 clia board\r"); delay(10000);
+  tx("ssh SM-3 clia fans\r"); delay(10000);
+  tx("ssh SM-3 clia shelf fans_state\r"); delay(10000);
+  tx("ssh SM-3 clia alarm info\r"); delay(10000);
+  tx("ssh SM-3 clia shelf cooling_state\r"); delay(10000);
+
+  tx("fsclish -c 'show tools system-status brief list'\r"); pause(65);
+
+  // AHUB Configuration files
+  tx("cat /tftpboot/fabric_staging/Switch-1-8_fi.conf\r"); delay(5000);
+  tx("cat /tftpboot/fabric_staging/Switch-1-9_fi.conf\r"); delay(5000);
+  tx("cat /tftpboot/fabric_staging/Switch-2-8_fi.conf\r"); delay(5000);
+  tx("cat /tftpboot/fabric_staging/Switch-2-9_fi.conf\r"); delay(5000);
+  tx("cat /tftpboot/fabric_staging/Switch-3-8_fi.conf\r"); delay(5000);
+  tx("cat /tftpboot/fabric_staging/Switch-3-9_fi.conf\r"); delay(5000);
+
+
+  //tx("fsclish -c 'show sw-manage embedded-sw version all'\r");  pause(300);
+
+
+
+
+endfunction
+
+/*
+show alarm active filter-by managed-object TCU-10
+Check the physical location in open MGW.
+To check the physical location of the FRU, enter the following command:
+# hwcli|grep TCU-10
+  Below is an example of the output:
+  TCU-10 : node available /cabinet-1/chassis-2/piu-3/LMP-0/CPU-0/core-0
+
+
+scp nsn_merge_x86_64_01_02.zip root@169.254.9.21:/tmp/etc.txt
+scp juan.txt CLA-1:/tmp/etc.txt
+
+
+/var/log/swm.log 
+/var/log/fsconfigure.log 
+/var/log/syslog
+
+
+
+root@CLA-0 [MGW01MOA]  > show file usb mount
+>>Executing a command CLA-0@MGW01MOA [2017-04-05 02:21:52 -0500]
+No usb mount points
+
+
+ssh Switch-1-8 "mcli" "fabric-ethernet" show running-config"
+ 
+fsclish -c 'shell hardware fabric-config switch-id Switch-1-8' 
+-c 'show port all' -c 'show sfp-info all' 
+-c 'show interface ethernet 3/1' 
+show interface ethernet 3/4
+
+ ssh Switch-1-8 "mcli && fabric-ethernet "" &&show port all'" 
+
+ $ ssh bar@foo "command1 && command2"
+
+You can run sudo command as follows on a remote box called server1.cyberciti.biz:
+$ ssh -t vivek@server1.cyberciti.biz "sudo /sbin/shutdown -h now"
+
+And, finally:
+$ ssh root@server1.cyberciti.biz "sync && sync && /sbin/shutdown -h now"
+
+ssh Switch-1-8 << HERE
+mcli show port all
+show sfp-info all
+show interface ethernet 3/1
+show interface ethernet 3/4
+exit
+HERE
+
+ssh -t vivek@server1.cyberciti.biz << EOF
+ sync
+ sync
+ sudo /sbin/shutdown -h 0
+EOF
+
+ssh user1@server1 'command1 | command2'
+
+$ ssh USER@HOST 'COMMAND1; COMMAND2; COMMAND3'
+– or –
+
+$ ssh USER@HOST 'COMMAND1 | COMMAND2 | COMMAND3'
+– or –
+
+$ ssh USER@HOST << EOF
+COMMAND1
+COMMAND2
+COMMAND3
+EOF
+
+
+
+
+
+sb2 spnsn1   NOKIA1212
+
+
+#
+
+//clia sendcmd 0x86 30 AA 0
+
+shell hardware fabric-config switch-id Switch-1-8
+show port all
+show sfp-info all
+show interface ethernet 3/1
+show interface ethernet 3/4
+exit
+
+ bash command:
+ 
+ 
+ set alarm clear-matching-alarms forced yes filter-by severity 1
+ 
+ 
+ */
+ 
+ 
+ function PROMPT()
+   string line;
+   while(getline(line)) if(getline(line," '#' ")) break; endif endwhile
+ endfunction

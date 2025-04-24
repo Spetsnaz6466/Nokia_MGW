@@ -1,0 +1,100 @@
+/***************************************************************
+Macro pre-check before and after activity for ATCA MGW
+Ui5.0 4.3.0
+by: Kenjie Campat
+***************************************************************/
+
+//device prompt settings should be set to NONE
+//
+
+
+   function main()
+string mmldevice;
+string logfile;
+
+if(ask(mmldevice,"Give MML-connection name")==-1)
+	abort();
+endif
+	
+	device(mmldevice);  
+
+question(3,"Y/N ?");
+answer(3,"N\r");
+question(4, "--More--");
+answer (4," ");
+
+logfile = "MGW_precheck_.txt";
+logfile=askfile("Logfiles (*.txt)|*.txt",logfile,"Give logfile");
+logset(logfile,NEW);
+	
+	                     
+//device("ATCA_MGW_Precheck");
+
+tx("show alarm active");
+delay(2000);
+tx("show alarm active-summary detailed");
+delay(1000);
+tx("show functional-unit unit-info show-mode verbose");
+delay(3000);
+tx("show has state managed-object /*");
+delay(3000);
+tx("show has state managed-object /*/*");
+delay(5000);
+tx("show has summary");
+delay(1000);
+tx("show hardware state list");
+delay(15000);
+tx("show hardware inventory list brief");
+delay(15000);
+tx("show vmgw mgw");
+delay(1000);
+tx("show vmgw mgw mod 0");
+delay(3000);
+tx("show mgw iwf control-data");
+delay(1000);
+tx("show mgw synchronization all");
+delay(2000);
+tx("show tdm sdh pgr");
+delay(1000);
+tx("show tdm sdh hierarchy");
+delay(1000);
+tx("show tdm circuitgroup all");
+delay(1000);
+tx("show tdm circuitgroup crct cgr cgr-num 300-3071 ");
+delay(8000);
+tx("show tdm ater-state");
+delay(6000);
+tx("show signaling ss7 association all");
+delay(1000);
+tx("show signaling ss7 link all");
+delay(1000);
+tx("show signaling ss7 linkset all");
+delay(1000);
+tx("show signaling ss7 route all");
+delay(1000);
+tx("show networking address");
+delay(3000);
+tx("show networking interface");
+delay(3000);
+tx("show license feature-mgmt all");
+delay(1000);
+tx("show license feature-mgmt usage all");
+delay(1000);
+tx("show snapshot listall");
+delay(1000);
+tx("show snapshot list");
+delay(1000);
+tx("show snapshot current-startup");
+delay(1000);
+tx("show file list /mnt/backup");
+delay(1000);
+tx("show sw-manage current all");
+delay(10000);
+tx("show sw-manage list");
+delay(6000);
+tx("show alarm active-summary detailed");
+
+
+
+//no terminal length
+endfunction

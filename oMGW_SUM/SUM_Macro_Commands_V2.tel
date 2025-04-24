@@ -1,0 +1,138 @@
+
+function oMGW_SUM()
+
+ string  line,Tel,Day,Month,PCTime,Year,filename,filename_users,FLAG;
+ string  Textual_identity[],Assigned_users[],Assigned_permissions[];
+ string  PRIMARY_GROUP[],PAU[],SECONDARY_GROUP[],SGU[];
+ string  HOME[],SHELL[],NUMI[],USERID[];
+ integer handle,n,x,z,file_handle,cuenta=200,USERS,PG,SG,v,w;  
+ 
+ messagebox("Esta Macro realiza inventario de todos los usuarios, groups en general luego discrimina entre grupos primarios y secundarios.\nPrimero abra session con el Device");
+ 
+ Tel="MGWMGA05"; ask(Tel,"Ingrese Device Sesion"); device(Tel); send("date\r"); delay(2000);
+ if(getline(line,"':'")) 
+   strscan(line,"%s %s %s %s %s %s",Month,Month,Day,PCTime,Year,Year); 
+   PCTime=strreplace(PCTime,":","_"); PCTime = Month + "_" + Day + "_" + Year + "_" + PCTime; 
+   filename= "oMGW_LOG_SUM_" + Tel + "_"+ PCTime + ".TXT" ; 
+   filename_users="oMGW_USERS_SUM_" + Tel + "_"+ PCTime + ".TXT" ;
+   handle = fileopen(filename,NEW); fileclose(handle); logenable(LOG_ENABLE_ALL); logset(filename,APPEND); 
+   USERS =  fileopen(filename_users,NEW); 
+ endif
+ 
+ // CUERPO I de la macro
+ send("fsclish -c 'show user-management permission'\n"); 
+ while(1) if(getline(line," '#' ")) break; endif endwhile delay(10000);
+ 
+ send("fsclish -c 'show user-management group include-permissions yes'\n"); 
+ while(1) if(getline(line," '#' ")) break; endif endwhile delay(10000);
+ 
+ // Buscando nombres de todos los grupos.
+ send("fsclish -c 'show user-management group show-etc-data yes'\n"); 
+ pause(50,"Espere al prompt...no cancele.");
+ file_handle = fileopen(filename,READ); n=0; print("Reading All Groups...\n");
+ while(fileread(file_handle,line,cuenta));
+   if(getline(line," 'Textual identity' ")) n++; 
+     strscan(line,"%s %s %s %s",Textual_identity[n],Textual_identity[n],Textual_identity[n],Textual_identity[n]); 
+     print("%d Grupo: %s",n,Textual_identity[n]);
+   //elseif(getline(line," '#' ")) break; ///////////// ESTA LINEA SE AÑADIO PARA BORRAR EL PAUSE/
+   endif
+   
+   if(getline(line," 'Numeric identity' ")) ; 
+     strscan(line,"%s %s %s %s",NUMI[n],NUMI[n],NUMI[n],NUMI[n]); 
+     print(" Group Identity: %s\n",NUMI[n]);
+   //elseif(getline(line," '#' ")) break; ///////////// ESTA LINEA SE AÑADIO PARA BORRAR EL PAUSE/
+   endif
+   
+   
+ endwhile
+ 
+ z=n; 
+ fileprint(USERS,"Son en total %d Textual identity(Groups)\n",z); 
+ print("Son en total %d Textual identity(Groups)\n",z);
+ 
+ // Buscando users de cada group.
+ print("Reading Users from Groups...\n");
+ for(x=1;x<=z;x++)
+   send("fsclish -c 'show user-management group group-name %s show-etc-data yes'\n",Textual_identity[x]); delay(1500);
+   while(getline(line))
+     if(getline(line," 'Assigned users          :' "))  
+       strscan(line,"%s %s %s %s",Assigned_users[x],Assigned_users[x],Assigned_users[x],Assigned_users[x]); 
+     endif
+     if(Assigned_users[x]=="to") Assigned_users[x]="NO_USERS"; endif
+       //print("%d Group %s User:%s\n",x,Textual_identity[x],Assigned_users[x]);   //elseif(getline(line," '#' ")) break;        // endif      //endif 
+   endwhile
+   print("%d Group %s User:%s\n",x,Textual_identity[x],Assigned_users[x]);
+ endfor
+ 
+  
+ //## READING PRIMARY GROUPS
+ print("Reading Primary Groups Only...\n");
+ PG=0;
+ send("fsclish -c 'show user-management group include-only-primary yes'\n"); 
+ while(1)
+  if(getline(line," 'Textual identity' "))  PG++;
+     strscan(line,"%s %s %s %s",PRIMARY_GROUP[PG],PRIMARY_GROUP[PG],PRIMARY_GROUP[PG],PRIMARY_GROUP[PG]); 
+     print("%d Primary Group: %s\n",PG,PRIMARY_GROUP[PG]);
+  elseif(getline(line," '#' ")) break; endif
+ endwhile
+ print("Son %d Grupos primarios\n",PG);
+ 
+ //## READING SECONDARY GROUPS
+ print("Reading Secondary Groups Only...\n");
+ SG=0;
+ send("fsclish -c 'show user-management group include-only-secondary yes'\n"); 
+ while(1)
+  if(getline(line," 'Textual identity' "))  SG++;
+     strscan(line,"%s %s %s %s",SECONDARY_GROUP[SG],SECONDARY_GROUP[SG],SECONDARY_GROUP[SG],SECONDARY_GROUP[SG]); 
+     print("%d Secondary Group: %s\n",SG,SECONDARY_GROUP[SG]);
+  elseif(getline(line," '#' ")) break; endif
+ endwhile
+ print("Son %d Grupos Secundarios\n",SG);
+  
+ // CUERPO II DE LA MACRO
+ 
+ print("Reading User Directory, Login Shell...\n");
+ for(x=1 ; x<=z ; x++ )
+   if(Assigned_users[x]<>"NO_USERS")
+     send("fsclish -c 'show user-management user user-name %s include-groups yes include-permissions yes'\n",Assigned_users[x]); delay(2000);
+   endif
+   HOME[x]=""; SHELL[x]="";
+   while(getline(line))
+     if(getline(line," 'Numeric id' "))
+       strscan(line,"%s %s %s %s",USERID[x],USERID[x],USERID[x],USERID[x]); endif 
+     if(getline(line," 'Home directory' "))  
+       strscan(line,"%s %s %s %s",HOME[x],HOME[x],HOME[x],HOME[x]); endif
+     if(getline(line," 'Login shell' "))
+       strscan(line,"%s %s %s %s",SHELL[x],SHELL[x],SHELL[x],SHELL[x]); endif 
+   endwhile
+   if(HOME[x]=="")
+     SHELL[x]="NO_USER"; HOME[x]="NO_USER"; USERID[x]="NO_USERID";
+   endif
+   print("%d GROUP: %s NUMI: %s USER: %s USERID: %s HOME: %s SHELL: %s \n",x,Textual_identity[x],NUMI[x],Assigned_users[x],USERID[x],HOME[x],SHELL[x]);
+ endfor
+  
+ //File Print
+ for(x=1;x<=z;x++)
+  FLAG="NO";
+  for(v=1;v<=PG;v++)
+    if(Textual_identity[x] == PRIMARY_GROUP[v]) FLAG="PRIMARIO"; endif
+  endfor
+  for(w=1;w<=SG;w++)
+    if(Textual_identity[x] == SECONDARY_GROUP[w]) FLAG="SECUNDARIO"; endif
+  endfor
+  fileprint(USERS,"%d GROUP: %s NUMI: %s G_PRI.: %s Users: %s USERID: %s HOMEDIR: %s Login_Shell: %s\n",x,Textual_identity[x],NUMI[x],FLAG,Assigned_users[x],USERID[x],HOME[x],SHELL[x]);
+ endfor
+  
+  fileclose(USERS);
+
+ print("END. YES!!!");
+ 
+ endfunction
+
+void function LOG_SQUARE(string information )
+ integer x,y=1; 
+ x = strlength(information); x= x + 4; 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor logprint("\n# %s #\n",information); 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor 
+ logprint("\n");
+endfunction

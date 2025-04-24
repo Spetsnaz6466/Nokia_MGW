@@ -1,0 +1,364 @@
+
+function oMGW_LBS()
+  string Tel,User,PCTime,A,B,FileName,Tel_IP;
+  string CMD1="",CMD2="",CMD3="",CMD4="";
+  
+  /* Esta macro pertenece a Juan Castillo, solicitar su uso 
+     He generado 3 tipos de funciones: 
+       * LBS_LOGGING:         4 comandos fsclish, 
+       * LBS_LOGGING_LINUX:   4 comandos Linux, 
+       * LBS_2FSCLISH_2LINUX: 2 comandos fsclish y luego 2 linux  
+  */
+  
+  pause(0,"Before execute macro Open and Login to a Device");
+  Tel="MGWMGA05";       ask(Tel,"INGRESE oMGW: ? ");    Tel=strupper(Tel); device(Tel);
+  Tel_IP="x.x.x.x"; ask(Tel,"INGRESE oMGW IP: ? ");
+  User="TEST1";         ask(User,"INGRESE User Name: ? "); 
+  
+  PCTime = getpctime(1); strscan(PCTime,"%s %s",A,B); 
+  print("INICIO DE MACRO PARA %s: %s\n",Tel,PCTime); B=strreplace(B,":","-"); PCTime = A + "_" + B;   
+  
+  LOG_SQUARE("blue",Tel);  
+  
+  //################################
+      LOG_SQUARE("red","ESTANDAR");
+  //################################
+   
+  /*1_1 Nombre_de_Usuario OK*/
+  //add user-management user user-name TEST1 
+  //set user-management passwd set-user-passwd user-name TEST1   
+  //tx("fsclish -c 'show user-management user user-name %s include-permissions yes'\r",User); delay(1900);
+  FileName="ESTANDAR_1_Nombre_de_Usuario";
+  CMD1= "show user-management user user-name " + User + " include-permissions yes";
+  LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900);
+
+  /*1_2 Longitud_de la contraseña OK*/
+  //set user-management configuration passwd lower-case 1 min-length 10 special-characters 1 max-retry 3 numeric-characters 1 upper-case 1 
+  //set user-management configuration passwd passwd-history-config-dir 24 passwd-history-etc 24
+  //tx("fsclish -c 'show user-management configuration passwd'\r"); delay(1900);
+  FileName="ESTANDAR_1_Longitud_de la contraseña";  CMD1= "show user-management configuration passwd";  LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900);
+  
+  /*1_3 Complejidad de la contraseña OK*/
+  //set user-management configuration passwd lower-case 1 min-length 10 special-characters 1 max-retry 3 numeric-characters 1 upper-case 1 
+  //set user-management configuration passwd passwd-history-config-dir 24 passwd-history-etc 24
+  //tx("fsclish -c 'show user-management configuration passwd'\r"); delay(1900);
+  FileName="ESTANDAR_1_Complejidad de la contraseña";  CMD1= "show user-management configuration passwd";  LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900);
+  
+  /*1_4 Período de validez OK*/
+  //set user-management configuration authentication lock-threshold 6 
+  //tx("fsclish -c 'show user-management configuration authentication'\r"); delay(1900);
+  FileName="ESTANDAR_1_Período de validez";  
+  CMD1= "show user-management configuration authentication";  
+  CMD2= "show user-management configuration account";
+  LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); CMD2="";
+  
+  /*1_5 Número de contraseñas anteriores OK*/
+  //set user-management configuration account max-days 120
+  //tx("fsclish -c 'show user-management configuration account'\r"); delay(1900);
+  FileName="ESTANDAR_1_5 Número de contraseñas anteriores"; CMD1= "show user-management configuration passwd";  LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*1_6 Usuarios y contraseñas por defecto OK*/
+  //set user-management configuration account max-days 120
+  //tx("fsclish -c 'show user-management configuration account'\r"); delay(1900);
+  FileName="ESTANDAR_1_6 Usuarios y contraseñas por defecto"; CMD1= "show user-management configuration passwd";  LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*1_7 Política de cifrado: OK*/
+  FileName="1_7 Política de cifrado"; CMD1= "show user-management configuration passwd";  LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*2_1 Número máximo de intentos de autenticación fallidos: OK*/
+  CMD1= "show user-management configuration authentication";  
+  CMD2= "show user-management configuration account";
+  FileName="ESTANDAR_2_1 Número máximo de intentos de autenticación fallidos"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); CMD2= "";
+  
+  /*2_2 Duración de bloqueo debido a contraseñas incorrectas: OK*/
+  CMD1= "show user-management configuration authentication";  
+  CMD2= "show user-management configuration account";
+  FileName="ESTANDAR_2_2 Duración de bloqueo debido a contraseñas incorrectas"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); CMD2= "";
+  
+  /*2_3 Notificación del vencimiento de contraseñas: OK*/
+  CMD1= "show user-management user user-name TEST1 show-etc-data yes";  
+  CMD2= "set user-management user user-name TEST1 max-days 60 min-days 1 warn-days 1 last-change 2022-05-03";
+  CMD3="show user-management configuration account";
+  FileName="ESTANDAR_2_3 Notificación del vencimiento de contraseñas"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); CMD2= ""; CMD3= "";
+  
+  /*3_1 Logs de operación: OK*/
+  CMD1= "head -n 100 /var/log/master-syslog";    
+  FileName="ESTANDAR_3_1 Logs de operación"; LBS_LOGGING_LINUX(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*3_2 Logs del Sistema: OK*/
+  CMD1= "head -n 100 /var/log/master-syslog";  
+  FileName="ESTANDAR_3_2 Logs del Sistema"; LBS_LOGGING_LINUX(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900);
+  
+  /*3_3 Logs de seguridad: OK*/
+  CMD1= "show user-management login-history";  
+  CMD2= "show log audit-trail filter-by user-name TEST1";
+  // show log audit-trail filter-by group-name TEST1 
+  // show user-management login-history user-name TEST1
+  CMD3= "head -n 100 /var/log/master-syslog"; 
+  FileName="ESTANDAR_3_3 Logs de seguridad"; LBS_2FSCLISH_2LINUX(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); CMD3="";
+  
+  /*3_4 Logs de alarmas: OK*/
+  CMD1= "show alarm history";  
+  CMD3= "head -n 100 /var/log/master-syslog"; 
+  FileName="ESTANDAR_3_4 Logs de alarmas"; LBS_2FSCLISH_2LINUX(Tel,PCTime, FileName,CMD1,CMD2,CMD3,CMD4,1900);
+  
+  /*3_5 Bloqueo de cuentas: OK*/
+  CMD1= "show user-management configuration authentication";  
+  CMD2= "show user-management configuration account"; 
+  CMD3= "show user-management lock-status"; 
+  FileName="ESTANDAR_3_5 Bloqueo de cuentas"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  CMD2=""; CMD3="";
+  
+  /*4 Lista de control de acceso: OK*/
+  CMD1= "show user-management user";  
+  CMD2= "show user-management login-history "; 
+  FileName="ESTANDAR_4 Lista de control de acceso"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); CMD2="";
+  
+  /*5 Cifrado del canal de comunicacion: OK*/
+  CMD1= "show mgmt-service ssh config";  
+  CMD3= "ps -ef | grep ssh"; 
+  FileName="ESTANDAR_5 Cifrado del canal de comunicacion"; LBS_2FSCLISH_2LINUX(Tel,PCTime, FileName,CMD1,CMD2,CMD3,CMD4,1900);
+  
+  /*6 Desactivación de servicio: OK*/
+  CMD4= "netstat -an | grep " + Tel_IP;  
+  CMD3= "ifconfig bond10"; 
+  FileName="ESTANDAR_6 Desactivación de servicio"; LBS_2FSCLISH_2LINUX(Tel,PCTime, FileName,CMD1,CMD2,CMD3,CMD4,1900); CMD3=""; CMD4="";
+  
+  /*7 Identificación del equipo en la red: OK*/
+  CMD1= "show config host CLA-0";  
+  FileName="ESTANDAR_7 Identificacion del equipo en la red"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); CMD2="";
+  
+  //################################
+    LOG_SQUARE("red","LBS-Usuarios");
+  //################################
+  
+  /*1 Inhabilitación de CTAS a los 90: OK*/
+  CMD1= "show user-management configuration authentication";  
+  CMD2= "show user-management configuration account";
+  CMD3= "show user-management login-history";
+  CMD4= "show user-management user show-etc-data yes user-name TEST1";
+  FileName="LBS-Usuarios_1 Inhabilitación de CTAS a los 90"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  CMD2= ""; CMD3= ""; CMD4= ""; 
+  
+  /*2 Eliminación o bloqueo definitivo: OK*/
+  CMD1= "show user-management configuration authentication"; 
+  CMD2= "show user-management configuration account"; 
+  FileName="LBS-Usuarios_2 Eliminación o bloqueo definitivo"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  CMD2= ""; 
+  
+  /*3 Expiración de Sesión por Inactividad: OK*/
+  CMD1= "show user-management configuration authentication"; 
+  CMD2= "show user-management configuration account"; 
+  CMD3= "show user-management login-history";
+  FileName="LBS-Usuarios_3 Expiración de Sesión por Inactividad"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  //####################################
+    LOG_SQUARE("red","LBS-Contraseñas");
+  //####################################
+  
+  //show user-management login-history user-name osuser
+  //set user-management lock-status user-name testuser action lock
+  //set user-management lock-status user-name testuser action unlock
+  //show user-management user user-name TEST1 include-permissions yes include-groups yes show-etc-data yes 
+  //add user-management group-to-permission group-name <group-name> {[perm-id <perm-id>]}
+  //delete user-management group-from-permission group-name testgroup perm-id fsumView
+ 
+  /*1 Autenticación Previa: OK*/
+  CMD1= "show user-management user user-name TEST1 include-permissions yes"; 
+  FileName="LBS-Contrasenhas_1 Autenticacion Previa"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*2 Cambia al primer Login: OK*/
+  CMD1= "show user-management user user-name TEST1 include-permissions yes"; 
+  FileName="LBS-Contrasenhas_2 Cambia al primer Login"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*3 Manejo de Historico de Contrasenhas: OK*/
+  CMD1= "show user-management user user-name TEST1 include-permissions yes";  
+  CMD2= "show user-management configuration passwd"; 
+  FileName="LBS-Contrasenhas_3 Manejo de Historico de Contrasenhas"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*4 :Longitud de las Contrasenhas OK*/
+  CMD1= "show user-management user user-name TEST1 include-permissions yes";  
+  CMD2= "show user-management configuration passwd";
+  FileName="LBS-Contrasenhas_4 Longitud de las Contrasenhas"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*5 Complejidad: OK*/
+  CMD1= "show user-management user user-name TEST1 include-permissions yes";  
+  CMD2= "show user-management configuration passwd";
+  FileName="LBS-Contrasenhas_5 Complejidad"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*6 Creacion Contrasenhas: OK*/
+  CMD1= "show user-management configuration authentication"; 
+  CMD2= "show user-management configuration account"; 
+  CMD3= "show user-management login-history";
+  FileName="LBS-Contrasenhas_6 Creacion Contrasenhas"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*7 Bloqueo de contrasenhas : OK*/
+  CMD1= "show user-management configuration authentication"; 
+  CMD2= "show user-management configuration account"; 
+  CMD3= "show user-management login-history";
+  FileName="LBS-Bloqueo de contrasenhas_7 "; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*8 Cambio de contrasenha: OK*/
+  CMD1= "show user-management configuration authentication"; 
+  CMD2= "show user-management configuration account"; 
+  FileName="LBS-Cambio de contrasenha_8 "; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*9 Cifrado de la Contrasenha: OK*/
+  CMD1= "show user-management configuration passwd "; 
+  FileName="LBS-Cifrado de la Contrasenha_9 "; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  //####################################
+    LOG_SQUARE("red","LBS-Redes");
+  //####################################
+  
+  /*1 Require Privilege Level 1 : OK*/
+  CMD1= "show user-management user user-name TEST1 include-permissions yes"; 
+  FileName="LBS-Redes_1 Require Privilege Level 1"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*2 Require VTY Transport SSH: OK*/
+  CMD1= "show user-management user user-name TEST1 include-permissions yes"; 
+  FileName="LBS-Redes_2 Require VTY Transport SSH"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*3 Require Timeout for Login Sessions: OK*/
+  CMD1= "show user-management login-history";   
+  FileName="LBS-Redes_3 Require Timeout for Login Sessions"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*4 Require Password Encryption Service: OK*/
+  CMD1= "show user-management configuration passwd ";  
+  FileName="LBS-Redes_4 Require EXEC Banner"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*5 Require Encrypted User Passwords: OK*/
+  CMD1= "show user-management configuration passwd "; 
+  FileName="LBS-Redes_5 Require Encrypted User Passwords"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*6 Require Clock Timezone – UTC: OK*/
+  CMD1= "show tools system-time time-zone "; 
+  FileName="LBS-Redes_6 Require Clock Timezone – UTC"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*7  Configure Prerequisites for the SSH Service: OK*/
+  CMD1= "show config host CLA-0"; 
+  CMD2= "show mgmt-service ssh config"; 
+  CMD3= "show user-management configuration passwd";
+  FileName="LBS-Redes_7 Configure Prerequisites forthe SSH Service"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*8 Require SSH version 2: OK*/
+  CMD1= "ssh -v localhost"; 
+  FileName="LBS-Redes_8 Require SSH version 2"; LBS_LOGGING_LINUX(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*9 Forbid Finger Service: OK*/
+  CMD1= "rpm -q finger"; 
+  FileName="LBS-Redes_9 Forbid Finger Service"; LBS_LOGGING_LINUX(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+    
+  /*10 Forbid Remote Startup Configuration: OK*/
+  CMD1= "rpm -q ftp"; 
+  CMD2= "rpm -q tftp"; 
+  FileName="LBS-Redes_10 Forbid Remote Startup Configuration"; LBS_LOGGING_LINUX(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*11 Forbid TFTP Server: OK*/
+  CMD1= "rpm -q ftp"; 
+  CMD2= "rpm -q tftp"; 
+  FileName="LBS-Redes_11 Forbid TFTP Server"; LBS_LOGGING_LINUX(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*12 Require Service Timestamps for Debug Messages: OK*/
+  CMD1= "head -n 100 /var/log/master-syslog"; 
+  FileName="LBS-Redes_12 Require Service Timestamps for Debug Messages"; LBS_LOGGING_LINUX(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*13 : Require Service Timestamps in Log Messages: OK*/
+  CMD1= "head -n 100 /var/log/master-syslog"; 
+  FileName="LBS-Redes_13 Require Service Timestamps in Log Messages"; LBS_LOGGING_LINUX(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*14 Require External Time Source: OK*/
+  CMD1= "show networking-service ntp"; 
+  CMD3= "ntpq -pn";
+  FileName="LBS-Redes_14 Require External Time Source"; LBS_2FSCLISH_2LINUX(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+    
+  /*15 Require Binding the NTP Service to Loopback Interface: OK*/
+  CMD1= "show networking-service ntp"; 
+  CMD3= "ntpq -pn";
+  FileName="LBS-Redes_15 Require Binding the NTP Service to Loopback Interface"; LBS_2FSCLISH_2LINUX(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*16 Forbid Private Source Addresses from External Networks: OK*/
+  CMD1= "show networking aclrule"; 
+  FileName="LBS-Redes_16 Forbid Private Source Addresses from External Networks"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+  /*17 Forbid External Source Addresses on Outbound Traffic: OK*/
+  CMD1= "show networking aclrule"; 
+  FileName="LBS-Redes_17 Forbid External Source Addresses on Outbound Traffic"; LBS_LOGGING(Tel,PCTime,FileName,CMD1,CMD2,CMD3,CMD4,1900); 
+  
+endfunction
+
+ /*########################
+  # FUNCIONES - NO TOCAR #
+  ########################*/
+ 
+function LBS_LOGGING(string Tel, string PCTime, string FileName, string CMD1, string CMD2, string CMD3, string CMD4, integer SECOND)
+ string filename;
+ integer handle;  
+  filename= Tel + "_"+ FileName +"_" + PCTime + "_.TXT" ; 
+  handle = fileopen(filename,NEW); fileclose(handle); logenable(LOG_ENABLE_ALL); logset(filename,APPEND); 
+  CMD1= "fsclish -c '"+ CMD1 + "'"; tx("%s\r",CMD1);  delay(SECOND); 
+  if(CMD2<>"") CMD2= "fsclish -c '"+ CMD2 + "'"; tx("%s\r",CMD2); delay(SECOND); tx("%s\r",CMD2); endif
+  if(CMD3<>"") CMD3= "fsclish -c '"+ CMD3 + "'"; tx("%s\r",CMD3); delay(SECOND); tx("%s\r",CMD3); endif
+  if(CMD4<>"") CMD4= "fsclish -c '"+ CMD4 + "'"; tx("%s\r",CMD4); delay(SECOND); tx("%s\r",CMD4); endif
+  logenable(LOG_ENABLE_NONE); CMD1=""; CMD2=""; CMD3=""; CMD4="";
+endfunction
+
+function LBS_LOGGING_LINUX(string Tel, string PCTime, string FileName, string CMD1, string CMD2, string CMD3, string CMD4, integer SECOND)
+ string filename;
+ integer handle;  
+  filename= Tel + "_"+ FileName +"_" + PCTime + "_.TXT" ; 
+  handle = fileopen(filename,NEW); fileclose(handle); logenable(LOG_ENABLE_ALL); logset(filename,APPEND);   
+  tx("%s\r",CMD1);  delay(SECOND); 
+  if(CMD2<>"") tx("%s\r",CMD2); delay(SECOND); endif
+  if(CMD3<>"") tx("%s\r",CMD3); delay(SECOND); endif
+  if(CMD4<>"") tx("%s\r",CMD4); delay(SECOND); endif
+  logenable(LOG_ENABLE_NONE); CMD1=""; CMD2=""; CMD3=""; CMD4="";
+endfunction
+
+function LBS_2FSCLISH_2LINUX(string Tel, string PCTime, string FileName, string CMD1, string CMD2, string CMD3, string CMD4, integer SECOND)
+ string filename;
+ integer handle;  
+  filename= Tel + "_"+ FileName +"_" + PCTime + "_.TXT" ; 
+  handle = fileopen(filename,NEW); fileclose(handle); logenable(LOG_ENABLE_ALL); logset(filename,APPEND);  
+  if(CMD1<>"") CMD1= "fsclish -c '"+ CMD1 + "'"; tx("%s\r",CMD1); delay(SECOND); endif  
+  if(CMD2<>"") CMD2= "fsclish -c '"+ CMD2 + "'"; tx("%s\r",CMD2); delay(SECOND); endif
+  if(CMD3<>"") tx("%s\r",CMD3); delay(SECOND); endif
+  if(CMD4<>"") tx("%s\r",CMD4); delay(SECOND); endif
+  logenable(LOG_ENABLE_NONE); CMD1=""; CMD2=""; CMD3=""; CMD4="";
+endfunction
+
+function PROMPT()
+   string line;
+   while(getline(line)) if(getline(line," '#' ")) break; endif endwhile
+endfunction
+ 
+string function PC_TIME()
+ string Month,Day,PCTime,Year;
+ PCTime = getpctime(1); //print("%s",PCTime);
+ PCTime=strreplace(PCTime,"-"," "); PCTime=strreplace(PCTime,":","-");
+ strscan(PCTime,"%s %s %s %s",Year,Month,Day,PCTime);  
+ PCTime = "_" + Day + "_" + Month + "_" + Year + "_" + PCTime; 
+ return PCTime;
+endfunction 
+
+void function LOG_SQUARE(string color,string information )
+ integer x,y=1;
+ if(color == "red") settextcolor(RGB(200,0,0));
+   elseif(color == "yellow") settextcolor(RGB(100,150,0));
+   elseif(color == "blue") settextcolor(RGB(0,0,250));
+   elseif(color == "green")  settextcolor(RGB(0,200,220));
+ endif
+ x = strlength(information); x= x + 4; print("\n"); 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor logprint("\n# %s #\n",information); 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor 
+ logprint("\n"); settextcolor(RGB(0,0,0));
+endfunction
+
+void function FILE_SQUARE(string information, integer handle2 )
+ integer x,y=1; 
+ x = strlength(information); x= x + 4;
+ fileprint(handle2,"\n"); 
+ for(y=1 ; y<=x ; y++) fileprint(handle2,"#"); endfor fileprint(handle2,"\n# %s #\n",information); 
+ for(y=1 ; y<=x ; y++) fileprint(handle2,"#"); endfor 
+ fileprint(handle2,"\n");
+endfunction

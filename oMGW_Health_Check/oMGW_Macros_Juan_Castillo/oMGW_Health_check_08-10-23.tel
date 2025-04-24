@@ -1,0 +1,273 @@
+
+function oMGW_Health_Pre_and_Post_check()
+  string filename,filename2,PCTime,Tel,FU[],UNIT[];
+  string PRE,line="",fecha="",temp;
+  integer handle,handle2,x,y; 
+  
+  // Esta macro pertenece a Juan Castillo, solicitar su uso 
+  
+  pause(0,"Before execute macro Open and Login to a Device");
+  Tel="MGWALK02"; ask(Tel,"INGRESE ssh oMGW ? "); Tel=strupper(Tel); 
+  device(Tel); LOG_SQUARE("blue",Tel);
+  PCTime = PC_TIME(); print("INICIO DE MACRO: %s\n",PCTime); promptcheck(NONE);    
+  PRE="PRE"; ask(PRE,"PRE OR POST CHECK (PRE/POST) ?? "); PRE=strupper(PRE);
+  filename= Tel + "_oMGW_" + PRE + "_" + PCTime + "_.TXT" ; 
+  filename2= "RESUME_" + Tel + "_oMGW16_5_" + PRE + "_" + PCTime + "_.TXT" ;
+  handle = fileopen(filename,NEW); fileclose(handle); logenable(LOG_ENABLE_ALL); logset(filename,APPEND); 
+  handle2 = fileopen(filename2,NEW); 
+  fecha=PCTime; fecha=strreplace(fecha,"_","-"); ask(fecha,"ALARMA FORMATO DD-MM-YYYY.HR:MN:SG ?"); 
+  if(fecha=="") fecha="01-01-2000:00:00:00"; endif
+    
+  prompt(1,"#");
+  settextcolor(RGB(0,150,0)); print("MGW User Plane Usage\n"); settextcolor(RGB(0,0,0));
+  tx("fsclish -c 'show troubleshooting user-plane all-context mode 1'\r"); 
+  while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(1000);
+  
+  settextcolor(RGB(0,150,0)); print("Alarms\n"); settextcolor(RGB(0,0,0));
+  tx("fsclish -c 'show alarm alarm-count'\r"); delay(1000);
+  tx("fsclish -c 'show alarm active-summary brief'\r"); delay(1000);
+  tx("fsclish -c 'show alarm active-summary'\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(1000);
+  tx("fsclish -c 'set cli built-in output structured' -c 'show alarm active'\r"); delay(3000);
+  tx("fsclish -c 'history'\r"); delay(1000);
+  tx("fsclish -c 'set cli built-in output structured' -c 'show alarm history filter-by from-event-time %s'\r",fecha); pause(60);
+  tx("fsclish -c 'show alarm blocking-rule all'\r"); delay(1000);  
+  tx("fsclish -c 'show has filter node state availability managed-object */*'"); pause(15);
+  tx("fsclish -c 'show tools system-status brief list'\r"); pause(70);
+  x=0;
+  while(getline(line,"'ENA   OK' OR 'LMP-' OR 'AHUB3-A'"))  
+    x++; fileprint(handle2,line); strscan(line,"%s",FU[x]); FU[x]=strreplace(FU[x],"/",""); print("%s\n",FU[x]);
+  endwhile  
+  for(y=1;y<=x;y++)
+    tx("ping -c 1 -i 0 %s\r",FU[y]); delay(2000); 
+    if(getline(line," '1 received'")) print("%s OK\n",FU[y]); fileprint(handle2,line); 
+    else send(chr(3)); print("%s FAIL!!!\n",FU[y]); endif 
+  endfor
+  
+  for(y=1;y<=x;y++)
+    UNIT[y]=strreplace(FU[y],"-"," "); strscan(UNIT[y],"%s",UNIT[y]); 
+    if(UNIT[y]=="CLA")     
+      tx("ssh -4q -o StrictHostKeyChecking=no %s free -m\r",FU[y]); 
+      if(getline(line," 'Mem:'")) print("%s %s",FU[y],line); fileprint(handle2,line); endif delay(2000);
+    elseif(UNIT[y]=="ISU") 
+      tx("ssh -4q -o StrictHostKeyChecking=no %s free -m\r",FU[y]); delay(2000);
+      if(getline(line," 'Mem:'")) print("%s %s",FU[y],line); fileprint(handle2,line); endif delay(2000);
+    elseif(UNIT[y]=="TCU") 
+      tx("ssh -4q -o StrictHostKeyChecking=no %s free -m\r",FU[y]); delay(2000);
+      if(getline(line," 'Mem:'")) print("%s %s",FU[y],line); fileprint(handle2,line); endif delay(2000);
+    endif
+  endfor
+  settextcolor(RGB(0,150,0)); print("MANAGED OBJECTS\n"); settextcolor(RGB(0,0,0)); 
+  tx("fsclish -c 'show has summary managed-object /'\r"); delay(1000);
+  tx("fsclish -c 'show has state managed-object /*'\r"); delay(1000);
+  tx("ilclifunit -v\r"); delay(1000);
+  tx("ilclifunit -c\r"); delay(1000);
+  
+  settextcolor(RGB(0,150,0)); print("FUNCTIONAL UNITS\n"); settextcolor(RGB(0,0,0));
+  tx("fsclish -c 'show has functional-unit comp-addr-info'\r"); delay(1000);
+  tx("fsclish -c 'show has functional-unit unit-type-info'\r"); delay(1000);
+  tx("fsclish -c 'show has functional-unit unit-info show-mode verbose'\r"); delay(2000);
+  
+  settextcolor(RGB(0,150,0)); print("HDD State\n"); settextcolor(RGB(0,0,0));
+  tx("smartctl --all /dev/sda\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(1000);
+  tx("df -h /mnt/backup/\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(1000);           
+  tx("vgs\r"); delay(1000);
+  tx("lvs\r"); delay(2000);
+  
+  settextcolor(RGB(0,150,0)); print("HWR Inventory\n"); settextcolor(RGB(0,0,0));
+  tx("fsclish -c 'show hardware inventory list brief'\r"); delay(1000);
+  tx("fsclish -c 'show hardware state list'\r"); pause(60);
+    while(getline(line))
+      strscan(line,"%s %s %s %s",temp,temp,temp,temp);
+      if(temp<>"available")
+      print(line); fileprint(handle2,line);  endif
+    endwhile 
+  
+  settextcolor(RGB(0,150,0)); print("Software Inventory\n"); settextcolor(RGB(0,0,0));
+  tx("fsclish -c 'show sw-manage list'\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(5000);
+  tx("fsclish -c 'show sw-manage current all'\r"); pause(12);
+  
+  settextcolor(RGB(0,150,0)); print("Licence Software Inventory\n"); settextcolor(RGB(0,0,0));
+  tx("fsclish -c 'show mgw common'\r"); delay(1000);
+  tx("fsclish -c 'show license target-id'\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(1000);
+  tx("fsclish -c 'show license all'\r"); delay(1000);
+  tx("fsclish -c 'show license feature-mgmt all'\r"); delay(1000);
+  tx("fsclish -c 'show license feature-mgmt usage all table'\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(1000);
+  
+  settextcolor(RGB(0,150,0)); print("PDH/SDH Inventory\n"); settextcolor(RGB(0,0,0));
+  tx("fsclish -c 'show tdm pdh et-state'\r"); delay(1000);
+  tx("fsclish -c 'show tdm pdh et-configuration'\r"); delay(1000);
+  tx("fsclish -c 'show tdm pdh letgr'\r"); delay(1000);
+  tx("fsclish -c 'show tdm pdh letgr-state'\r"); delay(1000);
+  tx("fsclish -c 'show tdm sdh set-state'\r"); delay(1000);
+  tx("fsclish -c 'show tdm sdh pgr'\r"); delay(1000);
+  tx("fsclish -c 'show tdm sdh hierarchy'\r"); delay(1000);
+
+  settextcolor(RGB(0,150,0)); print("NODE ROUTING\n"); settextcolor(RGB(0,0,0));
+  tx("ip route\r"); delay(1000);
+  tx("ip route show table all\r"); delay(1000);
+  tx("fsclish -c 'show routing node CLA-0 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node CLA-0 static-route config'\r"); delay(1000);
+
+  tx("fsclish -c 'show routing node CLA-1 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node CLA-1 static-route config'\r"); delay(1000);
+
+  tx("fsclish -c 'show routing node ISU-0 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node ISU-0 static-route config'\r"); delay(1000);;
+
+  tx("fsclish -c 'show routing node ISU-1 route'\r"); delay(1000);;
+  tx("fsclish -c 'show routing node ISU-1 static-route config'\r"); delay(1000);;
+
+  tx("fsclish -c 'show routing node ISU-2 route'\r"); delay(1000);;
+  tx("fsclish -c 'show routing node ISU-2 static-route config'\r"); delay(1000);;
+
+  tx("fsclish -c 'show routing node ISU-3 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node ISU-3 static-route config'\r"); delay(1000);
+
+  tx("fsclish -c 'show routing node ISU-4 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node ISU-4 static-route config'\r"); delay(1000);
+
+  tx("fsclish -c 'show routing node ISU-5 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node ISU-5 static-route config'\r"); delay(1000);
+
+  tx("fsclish -c 'show routing node IPNI1P-0 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node IPNI1P-0 static-route config'\r"); delay(1000);
+
+  tx("fsclish -c 'show routing node IPNI1P-1 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node IPNI1P-1 static-route config'\r"); delay(1000);
+
+  tx("fsclish -c 'show routing node IPNI1P-2 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node IPNI1P-2 static-route config'\r"); delay(1000);
+
+  tx("fsclish -c 'show routing node IPNI1P-3 route'\r"); delay(1000);
+  tx("fsclish -c 'show routing node IPNI1P-3 static-route config'\r"); delay(1000);
+
+  settextcolor(RGB(0,150,0)); print("NETWORKING ADDRESS\n"); settextcolor(RGB(0,0,0));
+  tx("fsclish -c 'show networking address'\r"); delay(1000);
+  tx("fsclish -c 'show networking bond'\r"); delay(1000);
+  tx("fsclish -c 'show networking-service ntp'\r"); delay(1000);
+  tx("fsclish -c 'show networking link-state-detector'\r"); delay(1000);
+
+  settextcolor(RGB(0,150,0)); print("MEASUREMENT's\n"); settextcolor(RGB(0,0,0));
+  tx("fsclish -c 'show stats m-type info all'\r"); delay(1000);
+  tx("fsclish -c 'show stats m-job all'\r"); delay(1000);
+  tx("fsclish -c 'show stats obj-list all'\r"); delay(1000);
+  tx("fsclish -c 'show stats t-job all'\r"); delay(1000);
+  tx("fspm9cli agents\r"); delay(1000);
+  tx("ilnascli --unit omu ls\r"); delay(1000);
+  tx("ilnascli --unit OMU lp mpty_statistics_as\r"); delay(1000);
+  tx("ls -l /opt/nsn/SS_DP9/plans/\r"); delay(1000);
+  tx("ls -l /mnt/sysimg/opt/nsn/SS_ILStatistics/etc\r"); delay(1000);
+
+//Routing
+  settextcolor(RGB(0,150,0)); print("Routing\n"); settextcolor(RGB(0,0,0));
+  tx("fsclish -c 'show tdm circuitgroup all'\r"); delay(1000);
+//fsclish -c 'show tdm circuitgroup crct cgr cgr-num 1-3071'
+
+// SIGNALLING
+  settextcolor(RGB(0,150,0)); print("SIGNALLING\n"); settextcolor(RGB(0,0,0));
+  tx("fsclish -c 'show signaling sccp connections'\r"); delay(1000);
+  tx("fsclish -c 'show signaling service-access-point all'\r"); delay(1000);
+  tx("fsclish -c 'show signaling ss7 association all'\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(1000);
+  tx("fsclish -c 'show signaling ss7 own-point-code all'\r"); delay(1000);
+  tx("fsclish -c 'show signaling ss7 remote-as all'\r"); delay(1000);
+
+// VMGW
+  settextcolor(RGB(0,150,0)); print("VMGW\n"); settextcolor(RGB(0,0,0));
+  tx("fsclish -c 'show vmgw mgw mod 3'\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(1000);
+  tx("fsclish -c 'show vmgw mgw mod 0'\r"); delay(1000);
+
+// SYNCH
+  settextcolor(RGB(0,150,0)); print("SYNCH\n"); settextcolor(RGB(0,0,0));
+  tx("fsclish -c 'show mgw synchronization clock-distribution'\r"); delay(1000);
+  tx("fsclish -c 'show mgw synchronization inputreference'\r"); delay(1000);
+  tx("fsclish -c 'show mgw synchronization  clock-chaining'\r"); delay(1000);
+  tx("fsclish -c 'show mgw synchronization all'\r"); delay(1000);
+
+// SNAPSHOT
+  settextcolor(RGB(0,150,0)); print("SNAPSHOT\n"); settextcolor(RGB(0,0,0));
+  tx("fsclish -c 'show snapshot list'\r"); delay(10000);
+  tx("fsclish -c 'show snapshot listall'\r");delay(10000);
+  tx("fsclish -c 'show snapshot current-startup'\r");delay(10000);
+  tx("fsclish -c 'show snapshot currentall-startup'\r");delay(10000);
+  
+  /* 
+// Shelf Manager 1
+  tx("ssh SM-1 clia shelfaddress\r");delay(5000);
+  tx("ssh SM-1 clia shmstatus\r");delay(5000);
+  tx("ssh SM-1 clia showunhealthy\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(10000);
+  tx("ssh SM-1 clia board\r"); delay(5000);
+  tx("ssh SM-1 clia fans\r"); delay(5000);
+  tx("ssh SM-1 clia shelf fans_state\r"); delay(5000);
+  tx("ssh SM-1 clia alarm info\r"); delay(5000);
+  tx("ssh SM-1 clia shelf cooling_state\r"); delay(5000);
+
+// Shelf Manager 2
+  tx("ssh SM-2 clia shelfaddress\r"); delay(5000);
+  tx("ssh SM-2 clia shmstatus\r"); delay(5000);
+  tx("ssh SM-2 clia showunhealthy\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(10000);
+  tx("ssh SM-2 clia board\r"); delay(5000);
+  tx("ssh SM-2 clia fans\r"); delay(5000);
+  tx("ssh SM-2 clia shelf fans_state\r"); delay(5000);
+  tx("ssh SM-2 clia alarm info\r"); delay(5000);
+  tx("ssh SM-2 clia shelf cooling_state\r"); delay(5000);
+
+// Shelf Manager 3
+  tx("ssh SM-3 clia shelfaddress\r"); delay(5000);
+  tx("ssh SM-3 clia shmstatus\r"); delay(5000);
+  tx("ssh SM-3 clia showunhealthy\r"); while(getline(line)) print(line); fileprint(handle2,line);  endwhile delay(10000);
+  tx("ssh SM-3 clia board\r"); delay(5000);
+  tx("ssh SM-3 clia fans\r"); delay(5000);
+  tx("ssh SM-3 clia shelf fans_state\r"); delay(5000);
+  tx("ssh SM-3 clia alarm info\r"); delay(5000);
+  tx("ssh SM-3 clia shelf cooling_state\r"); delay(5000);
+ 
+  */
+
+  tx("fsclish -c 'show tools system-status brief list'\r"); delay(10000);
+
+// AHUB Configuration files
+  tx("cat /tftpboot/fabric_staging/Switch-1-8_fi.conf\r"); delay(5000);
+  tx("cat /tftpboot/fabric_staging/Switch-1-9_fi.conf\r"); delay(5000);
+  tx("cat /tftpboot/fabric_staging/Switch-2-8_fi.conf\r"); delay(5000);
+  tx("cat /tftpboot/fabric_staging/Switch-2-9_fi.conf\r"); delay(5000);
+  tx("cat /tftpboot/fabric_staging/Switch-3-8_fi.conf\r"); delay(5000);
+  tx("cat /tftpboot/fabric_staging/Switch-3-9_fi.conf\r"); delay(5000);
+
+
+  //tx("fsclish -c 'show sw-manage embedded-sw version all'\r");  pause(300);
+
+
+
+
+endfunction
+
+ /*########################
+  # FUNCIONES - NO TOCAR #
+  ########################*/
+ 
+ function PROMPT()
+   string line;
+   while(getline(line)) if(getline(line," '#' ")) break; endif endwhile
+ endfunction
+ 
+string function PC_TIME()
+ string Month,Day,PCTime,Year;
+ PCTime = getpctime(1); //print("%s",PCTime);
+ PCTime=strreplace(PCTime,"-"," "); PCTime=strreplace(PCTime,":","-");
+ strscan(PCTime,"%s %s %s %s",Year,Month,Day,PCTime);  
+ PCTime = Day + "_" + Month + "_" + Year + "_" + PCTime; 
+ return PCTime;
+endfunction 
+
+void function LOG_SQUARE(string color,string information )
+ integer x,y=1;
+ if(color == "red") settextcolor(RGB(200,0,0));
+   elseif(color == "yellow") settextcolor(RGB(100,150,0));
+   elseif(color == "blue") settextcolor(RGB(0,0,250));
+   elseif(color == "green")  settextcolor(RGB(0,200,220));
+ endif
+ x = strlength(information); x= x + 4; print("\n"); 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor logprint("\n# %s #\n",information); 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor 
+ logprint("\n"); settextcolor(RGB(0,0,0));
+endfunction

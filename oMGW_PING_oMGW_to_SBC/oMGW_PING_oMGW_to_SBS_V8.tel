@@ -1,0 +1,303 @@
+function oMGW_PING_oMGW_to_SBC()
+ string Tel,Temp="P";
+ integer m,n;  
+ 
+ m=1; //1st SBC
+ n=105; // Last SBC... see SBC function
+ messagebox("Primero abra session con el Device");
+ Tel="MGWMGA05"; ask(Tel,"Ingrese Device Sesion"); device(Tel); 
+ if( sniff()) print("%s Device operational",Tel);
+   Log_Resultados(Tel); //Esta funcion abre un log para salvar resultados
+   ask(Temp,"SBC's: (Ping [P]) OR (Check & Set Routes [CR]): [P/CR] ?? "); Temp=strupper(Temp);
+   if(Temp=="P")      
+     /*Esta funcion ejecuta PINGs desde los IPNIMP hacia los SBC's seleccionados*/
+     oMGW_PING_MGW_TO_SBC(m,n);  
+   elseif(Temp=="CR") 
+     /*Esta funcion revisa la existencia de rutas y sino existen imprime en la ventana 
+       de mensajes los comandos fsclish que crean dichas rutas*/
+     oMGW_MGW_ROUTE_TO_SBC(m,n); 
+   endif
+   print("\nEND OF MACRO. YES!!!");
+ else TEXT_IN_COLOR("red",Tel + " Device not active\n"); 
+ endif
+endfunction
+ 
+/*########################
+  # FUNCIONES - NO TOCAR #
+  ########################*/
+  
+void function TEXT_IN_COLOR(string color, string Phrase)  
+ if(color == "red") settextcolor(RGB(200,0,0));
+   elseif(color == "yellow") settextcolor(RGB(100,150,0));
+   elseif(color == "blue") settextcolor(RGB(0,0,250));
+   elseif(color == "green")  settextcolor(RGB(0,200,220));
+ endif
+ print("%s",Phrase); settextcolor(RGB(0,0,0));
+endfunction
+
+void function LOG_SQUARE(string color,string information )
+ integer x,y=1;
+ if(color == "red") settextcolor(RGB(200,0,0));
+   elseif(color == "yellow") settextcolor(RGB(100,150,0));
+   elseif(color == "blue") settextcolor(RGB(0,0,250));
+   elseif(color == "green")  settextcolor(RGB(0,200,220));
+ endif
+ x = strlength(information); x= x + 4; print("\n"); 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor logprint("\n# %s #\n",information); 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor 
+ logprint("\n"); settextcolor(RGB(0,0,0));
+endfunction
+
+void function Licensias()
+ string line;
+ print("Licensias VoIP\n");
+ send("fsclish -c \"show license all\"\r"); delay(1000);
+   if(getline(line,"'MGW VoIP Access'")) print(line); 
+   else print("No licence!!\n");
+   endif print("\n"); 
+endfunction
+
+void function Log_Resultados(string Tel)
+ string line,Month,Day,PCTime,Year,filename;
+ integer handle;
+ send("date\r"); delay(1000);
+   if(getline(line,"':'")) 
+     print(line); strscan(line,"%s %s %s %s %s %s",Month,Month,Day,PCTime,Year,Year); 
+     PCTime=strreplace(PCTime,":","-"); 
+      PCTime = Month + "_" + Day + "_" + Year + "_" + PCTime; 
+     filename= "LOG_" + Tel + "_PING_TO_SBS_"+ PCTime + ".TXT" ;
+     handle = fileopen(filename,NEW); fileclose(handle); 
+     print("Se ha creado el log: %s\n\n",filename); 
+     logenable(LOG_ENABLE_ALL); 
+     logset(filename,APPEND); 
+     LOG_SQUARE("blue",Tel);
+   endif
+endfunction
+
+string function SBSS(integer x) /* Nombre e IP del SBS destino */
+  string SBS[];
+SBS[1]="CSBALK01BGW1_x.x.x.133";
+SBS[2]="CSBALK01BGW2_x.x.x.143";
+SBS[3]="CSBALK01BGW3_x.x.x.153";
+SBS[4]="CSBALK01BGW4_x.x.x.163";
+SBS[5]="CSBALK04BGW1_x.x.X.133";
+SBS[6]="CSBALK04BGW2_x.x.X.143";
+SBS[7]="CSBALK04BGW3_x.x.X.153";
+SBS[8]="CSBALK04BGW4_x.x.X.163";
+SBS[9]="CSBALK05BGW1_x.x.X.133";
+SBS[10]="CSBALK05BGW2_x.x.X.143";
+SBS[11]="CSBALK05BGW3_x.x.X.153";
+SBS[12]="CSBALK05BGW4_x.x.X.163";
+SBS[13]="CSBALK06BGW1_x.x.X.133";
+SBS[14]="CSBALK06BGW2_x.x.X.143";
+SBS[15]="CSBALK06BGW3_x.x.X.153";
+SBS[16]="CSBALK06BGW4_x.x.X.163";
+SBS[17]="CSBING01BGW1_x.x.X.133";
+SBS[18]="CSBING01BGW2_x.x.X.143";
+SBS[19]="CSBING01BGW3_x.x.X.153";
+SBS[20]="CSBING01BGW4_x.x.X.163";
+SBS[21]="CSBING02BGW1_x.x.X.133";
+SBS[22]="CSBING02BGW2_x.x.X.143";
+SBS[23]="CSBING02BGW3_x.x.X.153";
+SBS[24]="CSBING02BGW4_x.x.X.163";
+SBS[25]="CSBING03BGW1_x.x.X.133";
+SBS[26]="CSBMGA02BGW1_x.x.X.133";
+SBS[27]="CSBMGA02BGW2_x.x.X.143";
+SBS[28]="CSBMGA02BGW3_x.x.X.153";
+SBS[29]="CSBMGA02BGW4_x.x.X.163";
+SBS[30]="CSBMGA03BGW1_x.x.X.133";
+SBS[31]="CSBMGA03BGW2_x.x.X.143";
+SBS[32]="CSBMGA03BGW3_x.x.X.153";
+SBS[33]="CSBMGA03BGW4_x.x.X.163";
+SBS[34]="CSBMGA04BGW1_x.x.X.133";
+SBS[35]="CSBMGA04BGW2_x.x.X.143";
+SBS[36]="CSBMGA04BGW3_x.x.X.153";
+SBS[37]="CSBMGA04BGW4_x.x.X.163";
+SBS[38]="CSBMGA05BGW1_x.x.X.133";
+SBS[39]="CSBMGA05BGW2_x.x.X.143";
+SBS[40]="CSBMGA05BGW3_x.x.X.153";
+SBS[41]="CSBMGA05BGW4_x.x.X.163";
+SBS[42]="CSBMGA06BGW1_x.x.x.133";
+SBS[43]="CSBMGA06BGW2_x.x.x.143";
+SBS[44]="CSBMGA06BGW3_x.x.x.153";
+SBS[45]="CSBMGA06BGW4_x.x.x.163";
+SBS[46]="CSBMGA07BGW1_x.x.x.133";
+SBS[47]="CSBMGA07BGW2_x.x.x.143";
+SBS[48]="CSBMGA07BGW3_x.x.x.153";
+SBS[49]="CSBMGA07BGW4_x.x.x.163";
+SBS[50]="CSBTRI05BGW1_x.x.x.133";
+SBS[51]="CSBTRI05BGW2_x.x.x.143";
+SBS[52]="CSBTRI05BGW3_x.x.x.153";
+SBS[53]="CSBTRI05BGW4_x.x.x.163";
+SBS[54]="CSBTRI06BGW1_x.x.x.133";
+SBS[55]="CSBTRI06BGW2_x.x.x.143";
+SBS[56]="CSBTRI06BGW3_x.x.x.153";
+SBS[57]="CSBTRI06BGW4_x.x.x.163";
+SBS[58]="CSBTRI07BGW1_x.x.x.133";
+SBS[59]="CSBTRI07BGW2_x.x.x.143";
+SBS[60]="CSBTRI07BGW3_x.x.x.153";
+SBS[61]="CSBTRI07BGW4_x.x.x.163";
+SBS[62]="CSBVEN01BGW1_x.x.X.133";
+SBS[63]="CSBVEN01BGW2_x.x.X.143";
+SBS[64]="CSBVEN01BGW3_x.x.X.153";
+SBS[65]="CSBVEN01BGW4_x.x.X.163";
+SBS[66]="CSBVEN02BGW1_x.x.X.133";
+SBS[67]="CSBVEN02BGW2_x.x.X.143";
+SBS[68]="CSBVEN02BGW3_x.x.X.153";
+SBS[69]="CSBVEN02BGW4_x.x.X.163";
+SBS[70]="CSBVEN03BGW1_x.x.X.133";
+SBS[71]="CSBVEN03BGW2_x.x.X.143";
+SBS[72]="CSBVEN03BGW3_x.x.X.153";
+SBS[73]="CSBVEN03BGW4_x.x.X.163";
+SBS[74]="CSBARA01BGW1_x.x.X.133";  //############ Nuevos SBS's 95 al 126
+SBS[75]="CSBARA01BGW2_x.x.X.143";
+SBS[76]="CSBARA01BGW3_x.x.X.153";
+SBS[77]="CSBARA01BGW4_x.x.X.163";
+SBS[78]="CSBARA02BGW1_x.x.X.133";
+SBS[79]="CSBARA02BGW2_x.x.X.143";
+SBS[80]="CSBARA02BGW3_x.x.X.153";
+SBS[81]="CSBARA02BGW4_x.x.X.163";
+SBS[82]="CSBARA03BGW1_x.x.X.133";
+SBS[83]="CSBARA03BGW2_x.x.X.143";
+SBS[84]="CSBARA03BGW3_x.x.X.153";
+SBS[85]="CSBARA03BGW4_x.x.X.163";
+SBS[86]="CSBVEN01BGW1_x.x.X.133";
+SBS[87]="CSBVEN01BGW2_x.x.X.143";
+SBS[88]="CSBVEN01BGW3_x.x.X.153";
+SBS[89]="CSBVEN01BGW4_x.x.X.163";
+SBS[90]="CSBVEN02BGW1_x.x.X.133";
+SBS[91]="CSBVEN02BGW2_x.x.X.143";
+SBS[92]="CSBVEN02BGW3_x.x.X.153";
+SBS[93]="CSBVEN02BGW4_x.x.X.163";
+SBS[94]="CSBVEN03BGW1_x.x.X.133";
+SBS[95]="CSBVEN03BGW2_x.x.X.143";
+SBS[96]="CSBVEN03BGW3_x.x.X.153";
+SBS[97]="CSBVEN03BGW4_x.x.X.163";
+SBS[98]="CSBING01BGW1_x.x.X.133";
+SBS[99]="CSBING01BGW2_x.x.X.143";
+SBS[100]="CSBING01BGW3_x.x.X.153";
+SBS[101]="CSBING01BGW4_x.x.X.163";
+SBS[102]="CSBING02BGW1_x.x.X.133";
+SBS[103]="CSBING02BGW2_x.x.X.143";
+SBS[104]="CSBING02BGW3_x.x.X.153";
+SBS[105]="CSBING02BGW4_x.x.X.163";
+
+  return SBS[x];
+endfunction
+
+void function oMGW_PING_MGW_TO_SBC(integer m1, integer n1)
+ string SBS_Name,SBS_IP,Temp,line,IPNIMP[],MBLTE_VLAN[],VLAN[],IPNIU_RG[],Net,subnet,red,count="4";
+ integer m,x,y,z=0;
+ 
+ pause(5,"PING desde los IPNIMP hacia los SBC, se indica la no existencia de una ruta");
+ ask(count,"Qty Pings.");
+ Licensias(); 
+ print("IPNIURG in WO-EX:\n"); x=0;
+ send("fsclish -c \"show has functional-unit unit-info unit-type IPNIU show-mode verbose\"\r"); delay(4000);
+   while(getline(line,"'WO-EX'"))x++; 
+     print(line); 
+     strscan(line,"%s %s %s %s %s %s",IPNIMP[x],IPNIMP[x],IPNIMP[x],IPNIMP[x],IPNIMP[x],IPNIMP[x]); 
+     IPNIMP[x]=strreplace(IPNIMP[x],"/"," "); strscan(IPNIMP[x],"%s",IPNIMP[x]); 
+   endwhile y=x; print("\n"); 
+   print("Routes on WO-EX IPNIURG\n");
+   for(x=1; x<=y; x++)
+     send("fsclish -c \"show routing node %s route all\"\r",IPNIMP[x]); 
+   endfor delay(2000);
+ print("MBLTE RG's IP\n"); x=0; 
+ send("fsclish -c \"show mgw-ip-userplane route association name MBLTE\"\r"); delay(3000);
+   while(getline(line,"'.'")) x++; print(line); strscan(line,"%s",MBLTE_VLAN[x]);      
+   endwhile y=x; print("\n"); 
+   for(x=1; x<=y; x++)
+     send("fsclish -c \"show networking address ip-address %s\"\r",MBLTE_VLAN[x]); delay(3000);
+     while(1)
+       if(getline(line,"'vlan' OR 'VLAN' ")) strscan(line,"%s",VLAN[x]); endif    
+       if(getline(line,"'owner' ")) strscan(line,"%s %s %s",IPNIU_RG[x],IPNIU_RG[x],IPNIU_RG[x]); endif 
+       print("%s %s\n",VLAN[x],IPNIU_RG[x]); break;
+     endwhile
+   endfor print("\n");
+   for(m=m1; m<=n1; m++)  //Define 1er SBS a pingear
+     SBS_Name = SBSS(m); SBS_Name=strreplace(SBS_Name,"_"," "); strscan(SBS_Name,"%s %s",SBS_Name,SBS_IP);
+     settextcolor(RGB(0,0,255)); print("*%d/%d %s-%s / ",m,n1,SBS_Name,SBS_IP); settextcolor(RGB(0,0,0));       
+     for(x=1; x<=y; x++)
+       send("fsclish -c \"show has functional-unit unit-info unit-type IPNIU show-mode verbose\"\r"); delay(2000);
+         if(getline(line,"'%s' AND 'WO-EX' ",IPNIU_RG[x])) // Selección del IPNIMP o equivalente asociado al RG activo. 
+           strscan(line,"%s %s %s %s %s %s ",IPNIMP[x],IPNIMP[x],IPNIMP[x],IPNIMP[x],IPNIMP[x],IPNIMP[x]); 
+           IPNIMP[x]=strreplace(IPNIMP[x],"/"," "); strscan(IPNIMP[x],"%s",IPNIMP[x]); 
+         endif            
+         send("fsclish -c \"show routing node %s route all\"\r",IPNIMP[x]); delay(3000);
+           Net=strreplace(SBS_IP,"."," "); strscan(Net,"%s %s %s",Net,subnet,red); Net=Net+"."+subnet+"."+red;
+           /* Si la subred se encentra definida en el IPNIMP entonces se ejecuta ping sino solo se reporta NO-ROU*/
+           if(getline(line,"'%s'",Net)) 
+             Temp="fsclish -c \"start networking tools ping network-host " +  SBS_IP + " node " + IPNIMP[x] + " interface "+ VLAN[x] +" count " + count + "\""; // print("%s",Temp);
+             send("%s\r",Temp);  
+             while(1)
+               if(getline(line," ' 0 received,' ")) settextcolor(RGB(255,0,100)); print("%s PING-NOK ",IPNIMP[x]); settextcolor(RGB(0,0,0)); z++; break;
+               elseif(getline(line," 'Network is unreachable' ")) settextcolor(RGB(255,0,0)); print("%s PING-UNRECH ",IPNIMP[x]); settextcolor(RGB(0,0,0)); z++; break;
+               elseif(getline(line," '64 bytes from' ")) print("%s PING-OK ",IPNIMP[x]); break; 
+              endif 
+             endwhile
+           else 
+             settextcolor(RGB(255,0,100)); print("%s NO-ROU ",IPNIMP[x]); settextcolor(RGB(0,0,0)); z++;          
+           endif
+         endfor
+     print("\n");
+   endfor
+   print("\nFallaron %d comandos\n",z);
+endfunction
+
+
+void function oMGW_MGW_ROUTE_TO_SBC(integer m1, integer n1)
+ string SBS_Name[],SBS_IP[],SBS_SUBNET[],line,IPNIMP[],DEST[];
+ string A,B,C,MBLTE_VLAN[],VLAN[];
+ integer m,x,y,z=0;
+ 
+ pause(5,"Revisa existencia de rutas estáticas hacia los SBC's imprimiendo los fsclish de las no encontradas");
+ Licensias();
+ print("IPNIMP in WO-EX:\n"); x=0;
+ send("fsclish -c \"show has functional-unit unit-info unit-type IPNIU show-mode verbose\"\r"); delay(2200);
+   while(getline(line,"'WO-EX'"))x++; 
+     print(line); strscan(line,"%s %s %s %s %s %s",IPNIMP[x],IPNIMP[x],IPNIMP[x],IPNIMP[x],IPNIMP[x],IPNIMP[x]); 
+     IPNIMP[x]=strreplace(IPNIMP[x],"/"," "); strscan(IPNIMP[x],"%s",IPNIMP[x]); 
+   endwhile y=x; print("\n");
+   
+ print("Saving Routes on WO-EX IPNIMP\n");
+ for(x=1; x<=y; x++)
+   send("fsclish -c \"show routing node %s route all\"\r",IPNIMP[x]); 
+ endfor delay(2000);
+   
+ print("\nMBLTE RG's IP\n"); x=0; 
+ send("fsclish -c \"show mgw-ip-userplane route association name MBLTE\"\r"); delay(2200);
+   while(getline(line,"'.'")) x++; print(line); strscan(line,"%s",MBLTE_VLAN[x]);      
+   endwhile y=x; print("\n"); 
+   for(x=1; x<=y; x++)
+     send("fsclish -c \"show networking address ip-address %s\"\r",MBLTE_VLAN[x]); delay(2200);
+     while(1)
+       if(getline(line,"'vlan' OR 'VLAN' ")) strscan(line,"%s",VLAN[x]); endif break; 
+     endwhile
+   endfor print("\n");
+   
+ print("Looking for routes to SBC's\n");
+ for(m=m1; m<=n1; m++)  //Define 1er SBS a pingear
+   SBS_Name[m] = SBSS(m); SBS_Name[m]=strreplace(SBS_Name[m],"_"," "); 
+   strscan(SBS_Name[m],"%s %s",SBS_Name[m],SBS_IP[m]); SBS_SUBNET[m]=strreplace(SBS_IP[m],"."," "); 
+   strscan(SBS_SUBNET[m],"%s %s %s",A,B,C); SBS_SUBNET[m]=A+"."+B+"."+C; //print("%s\n",SBS_SUBNET[m]);
+   settextcolor(RGB(0,0,255)); print("*%d/%d %s-%s / ",m,n1,SBS_Name[m],SBS_IP[m]); settextcolor(RGB(0,0,0));
+              
+   for(x=1; x<=y; x++) /* Si la subred se encentra definida en el IPNIMP entonces se ejecuta ping sino solo se reporta NO-ROU*/
+     send("fsclish -c \"show routing node %s route all\"\r",IPNIMP[x]); delay(2500);
+       if(getline(line,"'%s'",SBS_SUBNET[m])) print("%s ROU-OK ",IPNIMP[x]); 
+       elseif(getline(line,"'%s'",VLAN[x]))
+         strscan(line,"%s %s %s %s",DEST[x],DEST[x],DEST[x],DEST[x]);
+         settextcolor(RGB(200,0,100)); print("%s NO-ROU to SUBNET %s VLAN %s\n",IPNIMP[x],SBS_SUBNET[m],VLAN[x]); settextcolor(RGB(0,0,0)); z++; 
+         settextcolor(RGB(0,150,0)); 
+         print("fsclish -c \"set routing node %s static-route %s.128/26 nexthop gateway address %s bfd-tx-interval 1000 bfd-rx-interval 1000 bfd-detect-mult 4 bfd-monitoring disabled on\"\n",IPNIMP[x],SBS_SUBNET[m],DEST[x]); 
+         settextcolor(RGB(0,0,0)); 
+       endif
+   endfor print("\n");
+ endfor
+ print("\nFallaron %d comandos\n",z);
+endfunction
+
+
+
+

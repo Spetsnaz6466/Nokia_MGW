@@ -1,0 +1,95 @@
+
+function main()
+ string  line,Tel,Day,Month,PCTime,Year,filename,filename_users,FLAG;
+ string  Textual_identity[],Assigned_users[],Assigned_permissions[];
+ string  PRIMARY_GROUP[],PAU[],SECONDARY_GROUP[],SGU[];
+ string  HOME[],SHELL[],NUMI[],USERID[],FU[],RG[];
+ integer handle,n,x,z,file_handle,cuenta=200,USERS,PG,SG,v,wy,y1,y;  
+ 
+ messagebox("Esta Macro realiza el DataFill CHeck"); 
+ Tel="MGWING02"; ask(Tel,"Ingrese Device Sesion"); device(Tel);  send("date\r"); delay(2000);
+ if(getline(line,"':'")) 
+   strscan(line,"%s %s %s %s %s %s",Month,Month,Day,PCTime,Year,Year); 
+   PCTime=strreplace(PCTime,":","_"); PCTime = Month + "_" + Day + "_" + Year + "_" + PCTime; 
+   filename= "oMGW_DataFIll_Review_" + Tel + "_"+ PCTime + ".TXT" ; 
+   handle = fileopen(filename,NEW); fileclose(handle); logenable(LOG_ENABLE_ALL); logset(filename,APPEND); 
+ endif
+
+ LOG_SQUARE("dns_param"); delay(1500);
+ send("fsclish -c 'show networking-service dns'\n"); delay(3000);
+ send("fsclish -c 'show networking-service ntp'\n"); delay(3000);
+ send("fsclish -c 'show announcement-and-tone announcement load fnbr 1-3999 ftyp vat tcu-index 0'\r"); delay(3000);
+ send("fsclish -c 'show announcement-and-tone announcement load fnbr 3-3999 ftyp vad tcu-index 0'\r"); delay(3000);
+ send("fsclish -c 'show announcement-and-tone tone toneid 0'\n"); delay(3000);
+ send("fsclish -c 'show tdm pdh letgr '\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 16\n\n\n'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 17'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 18'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 19'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 20'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 21'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 22'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 23'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 24'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 25'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 26'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 27'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 28'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 29'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 30'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 31'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 48'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 49'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 50'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 51'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 52'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 53'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 54'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 55'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 56'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 57'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 58'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 59'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 60'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 61'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 62'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh set set-index 63'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh pgr'\n"); delay(3000);
+ send("fsclish -c 'show tdm common parameter all '\n"); delay(3000);
+ send("fsclish -c 'show license all'\n"); delay(3000);
+ send("fsclish -c 'show announcement-and-tone language-tag'\n"); delay(3000);
+ send("fsclish -c 'show networking link-state-detector'\n"); delay(3000);
+ send("fsclish -c 'show mgw power-save-mode configuration'\n"); delay(3000);
+ send("fsclish -c 'show nelmon common'\n"); delay(3000);
+ send("fsclish -c 'show troubleshooting common'\n"); delay(3000);
+ send("fsclish -c 'show mgw userplane dsp-profile'\n"); delay(3000);
+ send("fsclish -c 'show mgw-ip-userplane route ipbr name RNCIUCSOIP'\n"); delay(3000);
+ send("fsclish -c 'show mgw-ip-userplane route ipbr name BSCAOIP'\n"); delay(3000);
+ send("fsclish -c 'show mgw-ip-userplane route ipbr name MBLTE'\n"); delay(3000);
+ send("fsclish -c 'show mgw userplane ipbrid-set'\n"); delay(3000);
+ send("fsclish -c 'show mgw-ip-userplane route association ipbrid 1'\n"); delay(3000);
+ send("fsclish -c 'show mgw-ip-userplane route association ipbrid 2'\n"); delay(3000);
+ send("fsclish -c 'show mgw-ip-userplane route association ipbrid 3'\n"); delay(3000);
+ send("fsclish -c 'show mgw userplane common parameter all'\n"); delay(3000);
+ send("fsclish -c 'show signaling isdn lapd-profile all '\n"); delay(3000);
+ send("fsclish -c 'show signaling link-config link-profile all '\n"); delay(3000);
+ send("fsclish -c 'show signaling link-config timer-profile all'\n"); delay(3000);
+ send("fsclish -c 'show signaling sccp sccp-timer-profile all '\n"); delay(3000);
+ send("fsclish -c 'show signaling sctp-profile all '\n"); delay(3000);
+ send("fsclish -c 'show signaling service-access-point all '\n"); delay(3000);
+ send("fsclish -c 'show signaling ss7 mtp3-limits '\n"); delay(3000);
+ send("fsclish -c 'show signaling network-timers'\n"); delay(3000);
+ send("fsclish -c 'show signaling ss7 own-point-code all '\n"); delay(3000);
+ send("fsclish -c 'show signaling  ss7 sigtran-route all '\n"); delay(3000);
+ send("fsclish -c 'show mgw synchronization all'\n"); delay(3000);
+ print("FIN!!");
+
+endfunction
+
+void function LOG_SQUARE(string information )
+ integer x,y=1; 
+ x = strlength(information); x= x + 4; 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor logprint("\n# %s #\n",information); 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor 
+ logprint("\n");
+endfunction

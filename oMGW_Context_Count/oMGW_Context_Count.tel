@@ -1,0 +1,35 @@
+function Context_Count()
+
+ string  line,Tel,Day,Month,PCTime,Year,filename;
+ integer handle,Time;  
+ 
+ messagebox("Primero abra session con el Device");
+ Tel="MGWVEN04"; ask(Tel,"Ingrese Device Sesion"); device(Tel); send("date\r"); delay(2000);
+ if(getline(line,"':'")) 
+   strscan(line,"%s %s %s %s %s %s",Month,Month,Day,PCTime,Year,Year); 
+   PCTime=strreplace(PCTime,":","_"); PCTime = Month + "_" + Day + "_" + Year + "_" + PCTime; 
+   filename= "LOG_OMGW_CONTEXT_COUNT_" + Tel + "_"+ PCTime + ".TXT" ;
+   handle = fileopen(filename,NEW); fileclose(handle); logenable(LOG_ENABLE_ALL); logset(filename,APPEND); 
+ endif
+ 
+ LOG_SQUARE(Tel);
+ ask(Time,"Asigne el tiempo de espera (seg.)"); Time=Time*1000;
+ while(1)
+  send("fsclish -c 'show troubleshooting user-plane all-context mode 1'\r"); delay(Time);
+  if(getline(line," 'Total context count' ")) print(line); endif 
+  send("fsclish -c 'show troubleshooting user-plane all-context mode 0 vid 6'\r"); delay(Time);
+  send("fsclish -c 'show troubleshooting user-plane all-context mode 0 vid 7'\r"); delay(Time);
+  send("fsclish -c 'show troubleshooting user-plane all-context mode 0 vid 8'\r"); delay(Time);
+  send("fsclish -c 'show troubleshooting user-plane all-context mode 0 vid 9'\r"); delay(Time);
+  send("fsclish -c 'show troubleshooting user-plane all-context mode 0 vid 10'\r"); delay(Time);
+  send("fsclish -c 'show troubleshooting user-plane all-context mode 0 vid 11'\r"); delay(Time);
+ endwhile
+endfunction
+
+void function LOG_SQUARE(string information )
+ integer x,y=1; 
+ x = strlength(information); x= x + 4; 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor logprint("\n# %s #\n",information); 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor 
+ logprint("\n");
+endfunction

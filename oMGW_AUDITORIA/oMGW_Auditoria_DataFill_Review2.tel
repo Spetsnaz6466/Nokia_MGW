@@ -1,0 +1,135 @@
+function oMGW_ATP_FUNCTIONAL_DF_REVIEW()
+
+ string  line,Tel,Day,Month,PCTime,Year,filename,filename_users;
+ string  FU[];
+ integer handle,USERS,y1,y;  
+ 
+ messagebox("Esta Macro realiza el ATP Funcional & DataFill Review");
+ 
+ Tel="MGWVEN04"; ask(Tel,"Ingrese Device Sesion"); device(Tel); send("date\r"); delay(2000);
+ if(getline(line,"':'")) 
+   strscan(line,"%s %s %s %s %s %s",Month,Month,Day,PCTime,Year,Year); 
+   PCTime=strreplace(PCTime,":","_"); PCTime = Month + "_" + Day + "_" + Year + "_" + PCTime; 
+   filename= "oMGW_ATP_FUNCTIONAL_AND_DF_REVIEW_" + Tel + "_"+ PCTime + ".TXT" ; 
+   filename_users="oMGW_ATP_FUNCTIONAL_AND_DF_REVIEW___" + Tel + "_"+ PCTime + ".TXT" ;
+   handle = fileopen(filename,NEW); fileclose(handle); logenable(LOG_ENABLE_ALL); logset(filename,APPEND); 
+   USERS =  fileopen(filename_users,NEW); 
+ endif
+ 
+ //# 1.- PREPARACIÓN PARA LA INTEGRACIÓN
+ LOG_SQUARE("1.- PREPARACIÓN PARA LA INTEGRACIÓN" ); delay(1500);
+ send("fsclish -c 'show networking address owner /SharedIP'\n"); delay(1500);
+ send("fsclish -c 'show networking address iface bond10'\n"); delay(1500);
+
+ //# 2.- VERIFICACIÓN DE RECURSOS PARA LA INTERFACE
+ LOG_SQUARE("2.- VERIFICACIÓN DE RECURSOS PARA LA INTERFACE - O&M" ); delay(1500);
+ send("fsclish -c 'show networking address iface bond10'\n"); delay(1500);
+ 
+ LOG_SQUARE("2.- VERIFICACIÓN DE RECURSOS PARA LA INTERFACE - UserPlane" ); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN510'\n"); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN511'\n"); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN515'\n"); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN516'\n"); delay(1500);
+
+ LOG_SQUARE("2.- VERIFICACIÓN DE RECURSOS PARA LA INTERFACE - IuCS" ); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN512'\n"); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN517'\n"); delay(1500);
+
+ LOG_SQUARE("2.- VERIFICACIÓN DE RECURSOS PARA LA INTERFACE - AoIP" ); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN513'\n"); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN518'\n"); delay(1500);
+
+ LOG_SQUARE("2.- VERIFICACIÓN DE RECURSOS PARA LA INTERFACE - MB" ); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN514'\n"); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN519'\n"); delay(1500);
+
+ //#3.- VERIFICACIÓN DE RECURSOS PARA LA INTERFACE IuCS
+ LOG_SQUARE("3.- VERIFICACIÓN DE RECURSOS PARA LA INTERFACE - O&M" ); delay(1500);
+ send("fsclish -c 'show networking address iface bond10'\n"); delay(1500);
+ 
+ LOG_SQUARE("3.- VERIFICACIÓN DE RECURSOS PARA LA INTERFACE - UserPlane" ); delay(1500); 
+ send("fsclish -c 'show networking address iface VLAN510'\n"); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN511'\n"); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN515'\n"); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN516'\n"); delay(1500);
+
+ LOG_SQUARE("3.- VERIFICACIÓN DE RECURSOS PARA LA INTERFACE - IuCS" ); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN512'\n"); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN517'\n"); delay(1500);
+
+ LOG_SQUARE("3.- VERIFICACIÓN DE RECURSOS PARA LA INTERFACE - AoIP" ); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN513'\n"); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN518'\n"); delay(1500);
+
+ LOG_SQUARE("3.- VERIFICACIÓN DE RECURSOS PARA LA INTERFACE - MB" ); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN514'\n"); delay(1500);
+ send("fsclish -c 'show networking address iface VLAN519'\n"); delay(1500);
+
+ LOG_SQUARE("3.- USER PLANE" ); delay(1500);
+ send("fsclish -c 'show has functional-unit unit-info unit-type IPNIU'\n"); delay(1500); y=0;
+ while(getline(line," '/IPNIMP-' "))
+   y++; strscan(line,"%s %s %s %s %s %s",FU[y],FU[y],FU[y],FU[y],FU[y],FU[y]); 
+   FU[y]=strreplace(FU[y],"/"," "); strscan(FU[y],"%s",FU[y]);
+ endwhile
+ y1=y ;
+ for(y=1;y<=y1;y++) send("fsclish -c 'show routing node %s static-route config all'\n",FU[y]); delay(1500); endfor
+  
+ LOG_SQUARE("4.- VERIFICACIÓN DE RECURSOS PARA LA Control Plane" ); delay(1500);
+ send("fsclish -c 'show networking address user /SS7SGU'\n"); delay(1500);
+ send("fsclish -c 'show signaling ss7 association all'\n"); delay(1500);
+
+ LOG_SQUARE("5.- VERIFICACIÓN DE RECURSOS PARA MEGACO (H.248)" ); delay(1500);
+ send("fsclish -c 'show has functional-unit unit-info unit-type HCLB show-mode verbose'\n"); delay(1500); 
+ y=0; y1=1;
+ while(getline(line," '/MGW_HCLBRG-' "))
+   y++; strscan(line,"%s %s %s %s %s %s %s",FU[y],FU[y],FU[y],FU[y],FU[y],FU[y],FU[y]); 
+ endwhile
+ y1=y;
+ send("fsclish -c 'show networking address owner %s'\n",FU[1]); delay(1500);
+ for(y=2;y<=y1;y++) 
+   if(FU[y]<>FU[y-1]) send("fsclish -c 'show networking address owner %s'\n",FU[y]); delay(1500);
+   endif
+ endfor
+ send("fsclish -c 'show vmgw mgw mod 0'\n"); delay(1500);
+ 
+ LOG_SQUARE("6.- Verificar la configuración MTP" ); delay(1500);
+ send("fsclish -c 'show signaling ss7 local-as all'\n"); delay(1500);
+ send("fsclish -c 'show signaling ss7 remote-as all'\n"); delay(1500);
+ 
+ LOG_SQUARE("7.- Verificar la configuración SCCP" ); delay(1500);
+ send("fsclish -c 'show signaling sccp own-point-code all'\n"); delay(1500);
+ send("fsclish -c 'show signaling sccp destination-point-code all'\n"); delay(1500);
+ send("fsclish -c 'show signaling sccp concerned-subsystem all'\n"); delay(1500);
+ send("fsclish -c 'show signaling sccp concerned-point-code all'\n"); delay(1500);
+ 
+ LOG_SQUARE("8.- Verificar la configuración MGW default parameter" ); delay(1500);
+ send("fsclish -c 'show mgw common'\n"); delay(1500);
+ 
+ LOG_SQUARE("9.- Verificación de Integración de Multi point" ); delay(1500);
+ send("fsclish -c 'show nnsf mss'\n"); delay(1500);
+ send("fsclish -c 'show signaling global-title-translation result all'\n"); delay(1500);
+
+ LOG_SQUARE("10.- Verificación de Medidas de AMGW" ); delay(1500);
+ send("fsclish -c 'show stats m-job all'\n"); delay(1500);
+ send("fsclish -c 'show stats m-type info all'\n"); delay(1500);
+ send("fsclish -c 'show stats t-job all'\n"); delay(1500);
+ send("fsclish -c 'show stats obj-list all'\n"); delay(1500);
+
+ LOG_SQUARE("17.- VERIFICACIÓN DE LOS LICENCIA y FEATURE" ); delay(1500);
+ send("fsclish -c 'show license target-id'\n"); delay(1500);
+ send("fsclish -c 'show license all'\n"); delay(1500);
+ send("fsclish -c 'show license feature-mgmt all'\n"); delay(1500);
+ send("fsclish -c 'show license feature-mgmt usage all table'\n"); delay(1500);
+
+print("FIN!!!!");
+ 
+ 
+ endfunction
+
+void function LOG_SQUARE(string information )
+ integer x,y=1; 
+ x = strlength(information); x= x + 4; 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor logprint("\n# %s #\n",information); 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor 
+ logprint("\n");
+endfunction

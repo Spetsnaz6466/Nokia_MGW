@@ -1,0 +1,112 @@
+function oMGW_fsclish_on_All_oMGWs()
+ string Tel,filename;
+ integer handle,m,n,x;  
+ 
+ m=1; //1st oMGW
+ n=22; // Last oMGW
+ 
+ messagebox("1. Configure los comandos a enviar.\n2. Seleccione oMGW");
+ for(x=m; x<=n; x++)
+   print("*%d/%d %s\n",x,n,oMGW(x)); 
+ endfor
+ ask(Tel,"Seleccione oMGW/[ALL] : "); 
+ filename= "LOG_fsclish_on_oMGW_" + Tel + PC_TIME() + ".TXT" ;
+ handle = fileopen(filename,NEW); fileclose(handle); 
+ print("Se ha creado el log: %s\n\n",filename); logenable(LOG_ENABLE_ALL); logset(filename,APPEND); 
+ if(Tel == "ALL")
+   for(x=m; x<=n; x++) 
+    oMGW_FSCLISH(oMGW(x)); 
+   endfor
+ elseif(Tel<>"ALL")
+   oMGW_FSCLISH(Tel);
+ endif
+ print("\nEND OF MACRO. YES!!!");
+endfunction
+ 
+/*########################
+  # FUNCIONES - NO TOCAR #
+  ########################*/
+ 
+string function PC_TIME()
+ string Month,Day,PCTime,Year;
+ 
+ PCTime = getpctime(1); //print("%s",PCTime);
+ PCTime=strreplace(PCTime,"-"," "); PCTime=strreplace(PCTime,":","-");
+ strscan(PCTime,"%s %s %s %s",Year,Month,Day,PCTime);  
+ PCTime = "_" + Day + "_" + Month + "_" + Year + "_" + PCTime; 
+ return PCTime;
+endfunction 
+  
+void function LOG_SQUARE(string color,string information )
+ integer x,y=1;
+ if(color == "red") settextcolor(RGB(200,0,0));
+   elseif(color == "yellow") settextcolor(RGB(100,150,0));
+   elseif(color == "blue") settextcolor(RGB(0,0,250));
+   elseif(color == "green")  settextcolor(RGB(0,200,220));
+ endif
+ x = strlength(information); x= x + 4; print("\n"); 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor logprint("\n# %s #\n",information); 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor 
+ logprint("\n"); settextcolor(RGB(0,0,0));
+endfunction
+
+string function oMGW(integer x) /* Nombre e IP del SBS destino */
+ string oMGW[];
+ oMGW[1]="MGWALK01";
+ oMGW[2]="MGWALK02";
+ oMGW[3]="MGWARA01";
+ oMGW[4]="MGWARA02";
+ oMGW[5]="MGWARA03";
+ oMGW[6]="MGWARA04";
+ oMGW[7]="MGWBAR01";
+ oMGW[8]="MGWBUC01";
+ oMGW[9]="MGWING01";
+ oMGW[10]="MGWING02";
+ oMGW[11]="MGWMAR01";
+ oMGW[12]="MGWMGA01";
+ oMGW[13]="MGWMGA02";
+ oMGW[14]="MGWMGA03";
+ oMGW[15]="MGWMGA04";
+ oMGW[16]="MGWPER01";
+ oMGW[17]="MGWPRA01";
+ oMGW[18]="MGWTRI01";
+ oMGW[19]="MGWVEN01";
+ oMGW[20]="MGWVEN02";
+ oMGW[21]="MGWVEN03";
+ oMGW[22]="MGWVEN04";
+ return oMGW[x];
+endfunction
+
+string function PHRASE(string line,string FRASE)
+  FRASE=strreplace(line,FRASE,""); 
+  FRASE=strreplace(FRASE," ","_");
+  strscan(FRASE,"%s",FRASE);  
+  return FRASE;
+endfunction
+
+/*#############################
+  # CONFIGURACION - MODIFICAR #
+  #############################*/
+  
+void function oMGW_FSCLISH(string oMGW)
+ string line; 
+  device(oMGW); 
+  if(sniff()) send("\r\r");
+    LOG_SQUARE("blue",oMGW); print("%s accesado: Enviando comandos fsclish\n",oMGW); delay(4000);
+ 
+    /*#################################*/
+    /*# INSERTE LOS COMANDOS A ENVIAR #*/
+    /*#################################*/    
+    line="";
+    send("fsclish -c \"show sw-manage list\"\r");     while(1) if(getline(line," '#'")) break; endif endwhile
+    send("fsclish -c \"show sw-manage current all\"\r");  while(1) if(getline(line," '#'")) break; endif endwhile
+  else
+    print("Sin acceso a %s\n",oMGW);
+  endif
+  deviceclose(oMGW); delay(2000);
+endfunction
+
+void function PROMPT(string line)
+ while(1) if(getline(line," '#'")) break; endif endwhile
+endfunction
+

@@ -1,0 +1,63 @@
+function Context_Count()
+
+ string  line,Tel,Day,Month,PCTime,Year,filename;
+ string VM_ID[],vMGW_NAME[],HCLB_RG[],context;
+ integer handle,Time,n,z,y,y0;  
+ 
+ messagebox("Primero abra session con el Device");
+ Tel="MGWVEN04"; ask(Tel,"Ingrese Device Sesion"); device(Tel); send("date\r"); delay(2000);
+ if(getline(line,"':'")) 
+   strscan(line,"%s %s %s %s %s %s",Month,Month,Day,PCTime,Year,Year); 
+   PCTime=strreplace(PCTime,":","_"); PCTime = Month + "_" + Day + "_" + Year + "_" + PCTime; 
+   filename= "LOG_OMGW_CONTEXT_COUNT_" + Tel + "_"+ PCTime + ".TXT" ;
+   handle = fileopen(filename,NEW); fileclose(handle); logenable(LOG_ENABLE_ALL); logset(filename,APPEND); 
+ endif
+ 
+ LOG_SQUARE(Tel);
+ Time=0; ask(Time,"Asigne el tiempo de espera (seg.)"); Time=Time*1000;
+ 
+ 
+ /////////////////
+ send("fsclish -c 'show vmgw mgw mod 0'\r"); delay(5000);
+ n=0; 
+ while(getline(line))    
+   if(getline(line,"'virtual media gateway identifier' ")) n++; 
+    strscan(line,"%s %s %s %s %s %s",VM_ID[n],VM_ID[n],VM_ID[n],VM_ID[n],VM_ID[n],VM_ID[n]); endif     
+   if(getline(line," 'virtual media gateway name' ")) 
+    strscan(line,"%s %s %s %s %s %s",vMGW_NAME[n],vMGW_NAME[n],vMGW_NAME[n],vMGW_NAME[n],vMGW_NAME[n],vMGW_NAME[n]); endif   
+   if(getline(line,"'HCLB rg' ")) 
+     strscan(line,"%s %s %s %s",HCLB_RG[n],HCLB_RG[n],HCLB_RG[n],HCLB_RG[n]); endif    
+ endwhile
+ z=n; print("Son %d VMGW\n",z);
+ for(y=1;y<=z;y++)
+   print("%d MGW_ID %s VMGW_NAME %s RG %s \n",y,VM_ID[y],vMGW_NAME[y],HCLB_RG[y]);
+ endfor
+ 
+ ask(y0,"vMGW de inicio (#)"); y=y0;
+ while(1)
+  send("fsclish -c 'show troubleshooting user-plane all-context mode 1'\r"); delay(Time);
+  if(getline(line," 'Total context count' ")) print(line); endif 
+  for(y;y<=z;y++)
+    send("fsclish -c 'show troubleshooting user-plane all-context mode 0 vid %s'\r",VM_ID[y]); delay(Time);
+    
+    ///////
+    while(getline(line))
+    strscan(line,"%s",context); print("%s\n",context);
+    endwhile
+    
+    
+    ///////
+    
+    
+  endfor
+  y=y0;
+ endwhile
+endfunction
+
+void function LOG_SQUARE(string information )
+ integer x,y=1; 
+ x = strlength(information); x= x + 4; 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor logprint("\n# %s #\n",information); 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor 
+ logprint("\n");
+endfunction

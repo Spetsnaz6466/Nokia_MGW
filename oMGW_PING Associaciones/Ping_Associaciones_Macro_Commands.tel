@@ -1,0 +1,83 @@
+function PING_Asociaciones()
+ string  line,Tel,Day,Month,PCTime,Year,filename,A_ID[];
+ string  primary_local_ip_addr[],secondary_local_ip_addr[],node[],remote_as_name[],primary_remote_ip_addr[],secondary_remote_ip_addr[],status[];
+ integer handle,n,y,z,Inicio,Fin;  
+ 
+ messagebox("Primero abra session con el Device");
+ Tel="MGWMGA05"; ask(Tel,"Ingrese Device Sesion"); device(Tel); 
+ send("date\r"); delay(2000);
+ if(getline(line," ':' ")) 
+ print(line);
+   strscan(line,"%s %s %s %s %s %s",Month,Month,Day,PCTime,Year,Year); 
+   PCTime=strreplace(PCTime,":","_"); PCTime = Month + "_" + Day + "_" + Year + "_" + PCTime; 
+   filename= "LOG_PING_ASSOC_" + Tel + "_"+ PCTime + ".TXT" ;
+   print("Se crea LOG file: %s\n",filename);
+   handle = fileopen(filename,NEW); fileclose(handle); logenable(LOG_ENABLE_ALL); logset(filename,APPEND); 
+ endif
+ 
+ send("fsclish -c 'show signaling ss7 association all'\r"); delay(3000);
+ n=0; 
+ while(getline(line))    
+   if(getline(line,"'association id' ")) n++; strscan(line,"%s %s %s %s",A_ID[n],A_ID[n],A_ID[n],A_ID[n]); endif   
+   if(getline(line," 'primary-local-ip_addr' ")) 
+    strscan(line,"%s %s %s",primary_local_ip_addr[n],primary_local_ip_addr[n],primary_local_ip_addr[n]); endif   
+   if(getline(line,"'secondary-local-ip-addr' ")) 
+     strscan(line,"%s %s %s",secondary_local_ip_addr[n],secondary_local_ip_addr[n],secondary_local_ip_addr[n]); endif   
+   if(getline(line,"'node' ")) 
+     strscan(line,"%s %s %s",node[n],node[n],node[n]); node[n]=strreplace(node[n],"/",""); endif  
+   if(getline(line,"'remote-as-name' ")) 
+     strscan(line,"%s %s %s",remote_as_name[n],remote_as_name[n],remote_as_name[n]); endif  
+   if(getline(line,"'primary-remote-ip-addr' ")) 
+     strscan(line,"%s %s %s",primary_remote_ip_addr[n],primary_remote_ip_addr[n],primary_remote_ip_addr[n]); endif  
+    if(getline(line,"'secondary-remote-ip-addr' ")) 
+     strscan(line,"%s %s %s",secondary_remote_ip_addr[n],secondary_remote_ip_addr[n],secondary_remote_ip_addr[n]); endif
+   if(getline(line,"'status' ")) 
+     strscan(line,"%s %s %s",status[n],status[n],status[n]); endif 
+  endwhile
+  z=n; print("Son %d asociaciones\n",z);
+  
+  for(y=1;y<=z;y++)
+    print("%d %s ASS.ID %s NODE %s P.REM.IP %s S.REM.IP %s ASC.STAT. %s\n",y,remote_as_name[y],A_ID[y],node[y],primary_remote_ip_addr[y],secondary_remote_ip_addr[y],status[y]);
+  endfor
+  
+  Inicio=0; ask(Inicio,"Ping Inicio Asociation numbered (0=ALL)"); if(Inicio == 0) y=1; else y=Inicio; endif
+  Fin=0; ask(Fin,"Ping Fin Asociation numbered (0=FIN)"); if(Fin == 0) z=n; else z=Fin; endif
+  print("Ping desde Asociacion listada %d a %d\n",y,z);
+  
+  for(y;y<=z;y++)
+ 
+    print("\nPING: %s ASS.ID %s NODE %s\n",remote_as_name[y],A_ID[y],node[y],primary_remote_ip_addr[y]);
+   send("fsclish -c 'start networking tools ping network-host %s node %s count 6'\r",primary_remote_ip_addr[y],node[y]); 
+   while(1)
+     if(getline(line," '0 received,' ")) 
+       print("%s %s %s P.REM.IP %s",A_ID[y],remote_as_name[y],node[y],primary_remote_ip_addr[y]); print(" FAIL\n"); break;
+     elseif(getline(line," 'Network is unreachable' ")) 
+       print("PRIMARIO %s %s %s %s Network is unreachable\n",A_ID[y],remote_as_name[y],node[y],primary_remote_ip_addr[y]); break;
+     elseif(getline(line," '64 bytes from' ")) 
+       print("%s %s %s P.REM.IP %s",A_ID[y],remote_as_name[y],node[y],primary_remote_ip_addr[y]); print(" OK\n");  break;
+     endif 
+    endwhile 
+    
+   send("fsclish -c 'start networking tools ping network-host %s node %s count 6'\r",secondary_remote_ip_addr[y],node[y]); 
+   while(1)
+     if(getline(line," '0 received,' ")) 
+       print("%s %s %s S.REM.IP %s",A_ID[y],remote_as_name[y],node[y],secondary_remote_ip_addr[y]); print(" FAIL\n"); break;
+     elseif(getline(line," 'Network is unreachable' ")) 
+       print("SECUNDARIO %s %s %s %s Network is unreachable\n\n",A_ID[y],remote_as_name[y],node[y],secondary_remote_ip_addr[y]); break;
+     elseif(getline(line," '64 bytes from' ")) 
+       print("%s %s %s S.REM.IP %s",A_ID[y],remote_as_name[y],node[y],secondary_remote_ip_addr[y]); print(" OK\n");  break;
+     endif 
+    endwhile    
+    
+  endfor
+ 
+ print("END OF PING ASSOCIATION. YES!!!");
+ endfunction
+
+void function LOG_SQUARE(string information )
+ integer x,y=1; 
+ x = strlength(information); x= x + 4; 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor logprint("\n# %s #\n",information); 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor 
+ logprint("\n");
+endfunction

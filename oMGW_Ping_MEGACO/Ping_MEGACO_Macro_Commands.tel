@@ -1,0 +1,100 @@
+
+function PING_MEGACO_H248()
+
+ string  line,Tel,Day,Month,PCTime,Year,filename,VM_ID[];
+ string  vMGW_NAME[],HCLB_RG[],HCLB_RG0[],OPIP[],OSIP[],COPIP[],COSIP[],status[];
+ string  HCLB[],HCLB_ST[],Node[];
+ integer handle,n,y,z,m,z1,a;  
+ 
+ messagebox("Primero abra session con el Device");
+ Tel="MGWMGA05"; ask(Tel,"Ingrese Device Sesion"); device(Tel); send("date\r"); delay(2000);
+ if(getline(line,"':'")) 
+   strscan(line,"%s %s %s %s %s %s",Month,Month,Day,PCTime,Year,Year); 
+   PCTime=strreplace(PCTime,":","_"); PCTime = Month + "_" + Day + "_" + Year + "_" + PCTime; 
+   filename= "LOG_PING_MEGACO_" + Tel + "_"+ PCTime + ".TXT" ;
+   handle = fileopen(filename,NEW); fileclose(handle); logenable(LOG_ENABLE_ALL); logset(filename,APPEND); 
+ endif
+ 
+ send("fsclish -c 'show vmgw mgw mod 0'\r"); delay(5000);
+
+ n=0; 
+ while(getline(line))    
+   if(getline(line,"'virtual media gateway identifier' ")) n++; 
+    strscan(line,"%s %s %s %s %s %s",VM_ID[n],VM_ID[n],VM_ID[n],VM_ID[n],VM_ID[n],VM_ID[n]); endif     
+   if(getline(line," 'virtual media gateway name' ")) 
+    strscan(line,"%s %s %s %s %s %s",vMGW_NAME[n],vMGW_NAME[n],vMGW_NAME[n],vMGW_NAME[n],vMGW_NAME[n],vMGW_NAME[n]); endif   
+   if(getline(line,"'HCLB rg' ")) 
+     strscan(line,"%s %s %s %s",HCLB_RG[n],HCLB_RG[n],HCLB_RG[n],HCLB_RG0[n]); endif  
+   if(getline(line,"'own primary IP address' ")) 
+     strscan(line,"%s %s %s %s %s %s",OPIP[n],OPIP[n],OPIP[n],OPIP[n],OPIP[n],OPIP[n]);  endif  
+   if(getline(line,"'own secondary IP address' ")) 
+     strscan(line,"%s %s %s %s %s %s",OSIP[n],OSIP[n],OSIP[n],OSIP[n],OSIP[n],OSIP[n]); endif  
+   if(getline(line,"'control primary IP address' ")) 
+     strscan(line,"%s %s %s %s %s %s",COPIP[n],COPIP[n],COPIP[n],COPIP[n],COPIP[n],COPIP[n]); endif 
+    if(getline(line,"'control secondary IP address' ")) 
+     strscan(line,"%s %s %s %s %s %s",COSIP[n],COSIP[n],COSIP[n],COSIP[n],COSIP[n],COSIP[n]); endif
+   if(getline(line,"'state' ")) 
+     strscan(line,"%s %s %s",status[n],status[n],status[n]); endif 
+ endwhile
+ z=n; print("Son %d VMGW\n",z);
+  
+ for(y=1;y<=z;y++)
+   print("%d vMGW %s RG %s OPIP %s OSIP %s C-OPIP %s C-OSIP %s REGIST.%s\n",y,vMGW_NAME[y],HCLB_RG0[y],OPIP[y],OSIP[y],COPIP[y],COSIP[y],status[y]);
+ endfor
+  
+ send("fsclish -c 'show has functional-unit unit-info unit-type HCLB show-mode verbose'\r"); delay(1000);
+ m=0; 
+ while(getline(line))   
+   while(getline(line," '/MGW_HCLBFU-' ")) m++; 
+    strscan(line,"%s %s %s %s %s %s %s",HCLB[m],HCLB_ST[m],HCLB_ST[m],HCLB_ST[m],Node[m],Node[m],HCLB_RG[m]); 
+    Node[m]=strreplace(Node[m],"/"," "); strscan(Node[m],"%s",Node[m]);
+    HCLB_RG[m]=strreplace(HCLB_RG[m],"/MGW_HCLBRG-","");
+   endwhile 
+ endwhile
+ z1=m; print("Son %d HCLB's\n",z1);
+  
+ for(y=1;y<=z1;y++) print("%d HCLB: %s STAT: %s Node: %s RG: %s \n",y,HCLB[y],HCLB_ST[y],Node[y],HCLB_RG[y]); endfor
+ print("Hay %d HCLB's\n",z1);
+ 
+ for(y=1;y<=z;y++)
+ 
+   LOG_SQUARE(vMGW_NAME[y]); delay(2000);
+   print("RG: %s OPIP: %s C-OPIP: %s\n",HCLB_RG0[y],OPIP[y],COPIP[y]);
+   print("RG: %s OSIP: %s C-OSIP: %s\n",HCLB_RG0[y],OSIP[y],COSIP[y]);
+   for(a=1;a<=z1;a++)
+     if((HCLB_RG0[y]==HCLB_RG[a]) AND (HCLB_ST[a]=="WO-EX"))
+       print("%s %s %s\n",HCLB[a],Node[a],HCLB_ST[a]);
+       print("PING FROM %s TO CONTROL-OPIP: %s ",Node[a],COPIP[y]);   
+       send("fsclish -c 'start networking tools ping network-host %s node %s count 6'\r",COPIP[y],Node[a]); 
+       while(1)
+        if(getline(line," '0 received,' ")) print("FAIL\n"); break;
+        elseif(getline(line," 'Network is unreachable' ")) print("Network is unreachable\n"); break;
+        elseif(getline(line," '64 bytes from' ")) print("OK\n"); break;
+        endif 
+       endwhile 
+     endif   
+    if((HCLB_RG0[y]==HCLB_RG[a]) AND (HCLB_ST[a]=="SP-EX"))
+      print("%s %s %s\n",HCLB[a],Node[a],HCLB_ST[a]); 
+      print("PING FROM %s TO CONTROL-OSIP: %s ",Node[a],COSIP[y]);
+     send("fsclish -c 'start networking tools ping network-host %s node %s count 6'\r",COSIP[y],Node[a]); 
+     while(1)
+      if(getline(line," '0 received,' ")) print("FAIL\n"); break;
+      elseif(getline(line," 'Network is unreachable' ")) print("Network is unreachable\n"); break;
+      elseif(getline(line," '64 bytes from' ")) print("OK\n");; break;
+      endif 
+     endwhile    
+     endif
+   endfor 
+ 
+ endfor
+  
+ print("\n\nEND OF PING vMGW YES!!!");
+ endfunction
+
+void function LOG_SQUARE(string information )
+ integer x,y=1; 
+ x = strlength(information); x= x + 4; 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor logprint("\n# %s #\n",information); 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor 
+ logprint("\n");
+endfunction

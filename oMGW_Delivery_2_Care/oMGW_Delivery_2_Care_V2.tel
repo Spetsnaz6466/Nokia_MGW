@@ -1,0 +1,324 @@
+function oMGW_ATP_FUNCTIONAL_DF_REVIEW()
+
+ string  line,Tel,Day,Month,PCTime,Year,filename,filename_users,FLAG;
+ string  Textual_identity[],Assigned_users[],Assigned_permissions[];
+ string  PRIMARY_GROUP[],PAU[],SECONDARY_GROUP[],SGU[];
+ string  HOME[],SHELL[],NUMI[],USERID[],FU[],RG[];
+ integer handle,n,x,z,file_handle,cuenta=200,USERS,PG,SG,v,wy,y1,y;  
+ 
+ messagebox("Esta Macro realiza el Delivery 2 Care");
+ 
+ Tel="MGWMGA05"; ask(Tel,"Ingrese Device Sesion"); device(Tel); send("date\r"); delay(2000);
+ if(getline(line,"':'")) 
+   strscan(line,"%s %s %s %s %s %s",Month,Month,Day,PCTime,Year,Year); 
+   PCTime=strreplace(PCTime,":","_"); PCTime = Month + "_" + Day + "_" + Year + "_" + PCTime; 
+   filename= "oMGW_Delivery_2_CARE_" + Tel + "_"+ PCTime + ".TXT" ; 
+   //filename_users="oMGW_ATP_FUNCTIONAL_AND_DF_REVIEW___" + Tel + "_"+ PCTime + ".TXT" ;
+   handle = fileopen(filename,NEW); fileclose(handle); logenable(LOG_ENABLE_ALL); logset(filename,APPEND); 
+   //USERS =  fileopen(filename_users,NEW); 
+ endif
+
+ LOG_SQUARE("3.1.- Latest eSW versions" ); delay(1000);
+ send("sanity_test -t embedded\n"); PROMPT(line);
+
+ LOG_SQUARE("3.2.- All AHUB3 are configured with correct data" ); delay(1000);
+ send("cd /tftpboot/fabric_staging\n"); delay(1000);
+ send("ls -ltr\n"); delay(1000);
+ send("cd \n"); delay(1000);
+ send("ssh CLA-1\n"); delay(1500);
+ send("cd /tftpboot/fabric_staging\n"); delay(1500);
+ send("ls -ltr\n"); delay(1500); 
+ send("cd \n"); delay(1000);
+ send("exit\n"); delay(1500);
+ 
+ send("fsclish -c 'show mgw fabric-configuration difference switch-id Switch-1-8'\n"); PROMPT(line);
+ send("fsclish -c 'show mgw fabric-configuration difference switch-id Switch-1-9'\n"); PROMPT(line);
+ send("fsclish -c 'show mgw fabric-configuration difference switch-id Switch-2-8'\n"); PROMPT(line);
+ send("fsclish -c 'show mgw fabric-configuration difference switch-id Switch-2-9'\n"); PROMPT(line);
+ send("fsclish -c 'show mgw fabric-configuration difference switch-id Switch-3-8'\n"); PROMPT(line);
+ send("fsclish -c 'show mgw fabric-configuration difference switch-id Switch-3-9'\n"); PROMPT(line);
+ 
+ send("ssh root@CLA-1 'cat /tftpboot/fabric_staging/Switch-1-8_fi.conf | diff - /tftpboot/fabric_staging/Switch-1-8_fi.conf'\n"); delay(1500);
+ send("ssh root@CLA-1 'cat /tftpboot/fabric_staging/Switch-1-9_fi.conf | diff - /tftpboot/fabric_staging/Switch-1-9_fi.conf'\n"); delay(1500);
+ send("ssh root@CLA-1 'cat /tftpboot/fabric_staging/Switch-2-8_fi.conf | diff - /tftpboot/fabric_staging/Switch-2-8_fi.conf'\n"); delay(1500);
+ send("ssh root@CLA-1 'cat /tftpboot/fabric_staging/Switch-2-9_fi.conf | diff - /tftpboot/fabric_staging/Switch-2-9_fi.conf'\n"); delay(1500);
+ send("ssh root@CLA-1 'cat /tftpboot/fabric_staging/Switch-3-8_fi.conf | diff - /tftpboot/fabric_staging/Switch-3-8_fi.conf'\n"); delay(1500);
+ send("ssh root@CLA-1 'cat /tftpboot/fabric_staging/Switch-3-9_fi.conf | diff - /tftpboot/fabric_staging/Switch-3-9_fi.conf'\n"); delay(1500);
+ 
+ AHUB_VERSION("Switch-1-8");
+ AHUB_VERSION("Switch-1-9");
+ AHUB_VERSION("Switch-2-8");
+ AHUB_VERSION("Switch-2-9");
+ AHUB_VERSION("Switch-3-8");
+ AHUB_VERSION("Switch-3-9");
+ 
+ LOG_SQUARE("3.3.- All units/FRU should be available" ); delay(1000);
+ send("fsclish -c 'show hardware state list'\n"); PROMPT(line);
+ send("fsclish -c 'show hardware inventory list brief include-empty' | grep 'empty'\n"); PROMPT(line);
+ 
+ LOG_SQUARE("3.4.- All managed object should be ULOCKED ENABLED ACTIVE" ); delay(1000);
+ send("fsclish -c 'show has state managed-object /*/*'\n"); delay(2000); PROMPT(line);
+
+ LOG_SQUARE("3.5.- MGW deployment should Match with the actual HW" ); delay(1000);
+ send("fsclish -c 'show mgw deployment'\n"); PROMPT(line);
+
+ LOG_SQUARE("3.6.- oMGW have synchronization" ); delay(1000);
+ send("fsclish -c 'show mgw synchronization inputreference'\n"); PROMPT(line);
+ send("fsclish -c 'show mgw synchronization clock-distribution'\n"); PROMPT(line);
+ send("fsclish -c 'show mgw synchronization all'\n"); PROMPT(line);
+
+ LOG_SQUARE("3.7- Shelf Managers should be reachable by SSH and AHUBs by Telnet" ); delay(1000);
+ 
+ send("ssh sm-1 clia shmstatus\n"); PROMPT(line);
+ send("ssh sm-2 clia shmstatus\n"); PROMPT(line);
+ send("ssh sm-3 clia shmstatus\n"); PROMPT(line);
+ 
+ AHUB_REACHA("switch-1-8");
+ AHUB_REACHA("switch-1-9");
+ AHUB_REACHA("switch-2-8");
+ AHUB_REACHA("switch-2-9");
+ AHUB_REACHA("switch-3-8");
+ AHUB_REACHA("switch-3-9");
+
+ LOG_SQUARE("3.8- Check Shelf Manager address and status" ); delay(1000);
+ send("ssh sm-1 clia shelfaddress\n"); PROMPT(line);
+ send("ssh sm-2 clia shelfaddress\n"); PROMPT(line);
+ send("ssh sm-3 clia shelfaddress\n"); PROMPT(line);
+ 
+ send("ssh sm-1 clia shmstatus\n"); PROMPT(line);
+ send("ssh sm-2 clia shmstatus\n"); PROMPT(line);
+ send("ssh sm-3 clia shmstatus\n"); PROMPT(line);
+ 
+ LOG_SQUARE("3.9- Inspecting I/O system" ); delay(1000);
+ send("fsclish -c 'show cmf status verbose node-name /CLA-0'\n"); PROMPT(line);
+ send("fsclish -c 'show cmf status verbose node-name /CLA-1'\n"); PROMPT(line);
+
+ LOG_SQUARE("4.1- Latest software is installed in oMGW" ); delay(1000);
+ send("fsclish -c 'show sw-manage list'\n"); PROMPT(line);
+ send("fsclish -c 'show sw-manage current all'\n"); PROMPT(line);
+ 
+ LOG_SQUARE("4.2- There is backup of current SW and and snapshot" ); delay(1000);
+ send("ls -lt /mnt/backup/backup/*.iso\n"); PROMPT(line);
+ send("ssh CLA-1 ls -lt /mnt/backup/backup/*.iso\n"); PROMPT(line);
+ send("fsclish -c 'show snapshot listall'\n"); PROMPT(line);
+ send("fsclish -c 'show snapshot current-startup\n"); PROMPT(line);
+ 
+ LOG_SQUARE("4.3- Licenses are installed and active" ); delay(1000);
+ send("fsclish -c 'show license all'\n"); PROMPT(line);
+
+ LOG_SQUARE("4.4- oMGW have correct date and timezone" ); delay(1000);
+ send("fsclish -c 'show tools system-time current'\n"); PROMPT(line);
+ send("fsclish -c 'show tools system-time time-zone'\n"); PROMPT(line);
+ 
+ LOG_SQUARE("4.5- MGW GT should be defined" ); delay(1000);
+ send("fsclish -c 'show mgw common'\n"); PROMPT(line);
+
+ LOG_SQUARE("4.6- Command Calendar configuration" ); delay(1000);
+ send("cat /etc/cron.d/local\n"); PROMPT(line);
+ send("cd\n"); PROMPT(line);
+ send("cat backup_selective.cli\n"); PROMPT(line);
+ send("cat backup_selective.sh\n"); PROMPT(line);
+ 
+ LOG_SQUARE("5.1- TS-MGW-SW-0029 SIGTRAN association load unbalance - NO APLICA" ); delay(2000);
+
+ LOG_SQUARE("5.2- TS-MGW-SW-0050 - ICMPv4 protocol handling is denied in IPLIC in Ui5.0 EP3" ); delay(1000);
+ send("fsclish -c 'show networking aclrule'\n"); PROMPT(line);
+
+ LOG_SQUARE("5.4- TS-MGW-SW-0059 - DPC type check and correction Before Upgrade" ); delay(1000);
+ send("fsclish -c 'show signaling ss7 destination-point-code all'\n"); PROMPT(line);
+ send("fsclish -c 'show signaling sccp destination-point-code all'\n"); PROMPT(line); 
+ 
+ LOG_SQUARE("5.5- TS-MGW-HW-0046 - Allowed Transceiver modules" ); delay(1000);
+ 
+ TS_MGW_HW_0046("Switch-1-8");
+ TS_MGW_HW_0046("Switch-1-9");
+ TS_MGW_HW_0046("Switch-2-8");
+ TS_MGW_HW_0046("Switch-2-9");
+ TS_MGW_HW_0046("Switch-3-8");
+ TS_MGW_HW_0046("Switch-3-9");
+ 
+ LOG_SQUARE("5.6- TS-MGW-HW-0053 - SDH SET and ET indexes" ); pause(8,"REVISAR ESTE TN"); delay(1000);
+ send("fsclish -c 'show tdm sdh hierarchy'\n"); PROMPT(line);
+ send("fsclish -c 'show tdm sdh pgr'\n"); PROMPT(line); 
+ 
+ LOG_SQUARE("5.7- TS-MGW-HW-0059 - New hardware introduction" ); delay(1000); 
+ send("fsclish -c 'show hardware inventory list brief include-empty'\n"); PROMPT(line);
+ 
+ LOG_SQUARE("5.8- TS-MGW-HW-0067 - Open MGW Central processing " ); delay(1000); 
+ send("cat /proc/meminfo\n"); PROMPT(line);
+ send("ssh CLA-1 cat /proc/meminfo\n"); PROMPT(line);
+ send("ssh ISU-0 cat /proc/meminfo\n"); PROMPT(line);
+ send("ssh ISU-1 cat /proc/meminfo\n"); PROMPT(line);
+ send("ssh ISU-4 cat /proc/meminfo\n"); PROMPT(line);
+ send("ssh ISU-5 cat /proc/meminfo\n"); PROMPT(line);
+ 
+ LOG_SQUARE("5.10- TS-MGW-HW-0064 - Hard Disk Drive (HDD) health check" ); delay(1000); 
+ send("smartctl -x /dev/sda\n"); PROMPT(line);
+ send("ssh CLA-1 smartctl -x /dev/sda\n"); PROMPT(line);
+
+ LOG_SQUARE("5.11- TS-MGW-HW-0065 - Incorrectly programmed eSW on the backup bank" ); delay(1000); 
+ send("fsclish -c 'show sw-manage embedded-sw version all'\n"); PROMPT(line);
+ 
+ LOG_SQUARE("5.12- TS-MGW-HW-0068 - HW changes on HBRT3-B, AMPP2-A and NIRT2-A" ); delay(1000); 
+ send("fsclish -c 'show hardware inventory list brief include-empty'\n"); PROMPT(line);
+ send("fsclish -c 'show hardware inventory list detailed include-empty'\n"); PROMPT(line);
+ 
+ LOG_SQUARE("5.13- TS-MGW-HW-0069 - Workaround for Hot-Swap state of SCNAM-B being M7" ); delay(1000); 
+ send("ssh SM-1 clia board\n"); PROMPT(line);
+ send("ssh SM-2 clia board\n"); PROMPT(line);
+ send("ssh SM-3 clia board\n"); PROMPT(line);
+ 
+ LOG_SQUARE("5.14- TS-MGW-HW-0070 - Alarm 70160 Memory usage over limit"); delay(1000); 
+ send("fsclish -c 'show alarm active filter-by specific-problem 70160'\n"); PROMPT(line);
+ send("fsclish -c 'show alarm history filter-by specific-problem 70160'\n"); PROMPT(line);
+ LOG_SQUARE("IF ALARM 70160 Work around is cancel it manually" );
+  
+ LOG_SQUARE("5.15- TS-MGW-HW-0071 - ADSP2-A eSW update failure"); delay(1000); 
+ send("fsclish -c 'show sw-manage embedded-sw status all'\n"); PROMPT(line);   
+
+ LOG_SQUARE("5.16- TS-MGW-HW-0072  - SFP usage for AMPP2-A blade"); delay(1000); 
+ send("fsclish -c 'show has functional-unit unit-info unit-type IPNIU'\n"); pause(2); 
+ y=0; y1=1;
+ while(getline(line," '/IPNIMP-' "))
+   y++; strscan(line,"%s %s %s %s %s %s",FU[y],FU[y],FU[y],FU[y],FU[y],FU[y]); 
+ endwhile
+ y1=y;
+ for(y=1;y<=y1;y++) 
+   FU[y]=strreplace(FU[y],"/"," "); strscan(FU[y],"%s",FU[y]);
+   print("IPNIMP FU %s\n",FU[y]);
+ endfor 
+ for(y=1;y<=y1;y++) 
+   send("fsclish -c 'show networking interface runtime node %s iface ethrtm5'\n",FU[y]); delay(1000);
+   send("fsclish -c 'show networking interface runtime node %s iface ethrtm9'\n",FU[y]); delay(1000);    
+ endfor
+ send("fsclish -c 'show hardware transceiver node LMP-1-1-7 iface RTM0/5'\n"); delay(4000);
+ send("fsclish -c 'show hardware transceiver node LMP-1-1-7 iface RTM0/9'\n"); delay(4000);
+ send("fsclish -c 'show hardware transceiver node LMP-1-1-10 iface RTM0/5'\n"); delay(4000);
+ send("fsclish -c 'show hardware transceiver node LMP-1-1-10 iface RTM0/9'\n"); delay(4000);
+ send("fsclish -c 'show hardware transceiver node LMP-1-2-7 iface RTM0/5'\n"); delay(4000);
+ send("fsclish -c 'show hardware transceiver node LMP-1-2-7 iface RTM0/9'\n"); delay(4000);
+ send("fsclish -c 'show hardware transceiver node LMP-1-2-10 iface RTM0/5'\n"); delay(4000);
+ send("fsclish -c 'show hardware transceiver node LMP-1-2-10 iface RTM0/9'\n"); delay(4000);
+ send("fsclish -c 'show hardware transceiver node LMP-1-3-7 iface RTM0/5'\n"); delay(4000);
+ send("fsclish -c 'show hardware transceiver node LMP-1-3-7 iface RTM0/9'\n"); delay(4000);
+ send("fsclish -c 'show hardware transceiver node LMP-1-3-10 iface RTM0/5'\n"); delay(4000);
+ send("fsclish -c 'show hardware transceiver node LMP-1-3-10 iface RTM0/9'\n"); delay(4000);
+
+ LOG_SQUARE("5.16- TS-MGW-SW-0072  - Call drop if no ACL rule is configured to IPNIURG"); delay(1000); 
+ send("fsclish -c 'show networking aclrule'\n"); delay(3000);
+  
+ LOG_SQUARE("6.1- Used SCTP Profile"); delay(1000); 
+ send("fsclish -c 'show signaling sctp-profile name SCTP'\n"); delay(3000);
+ send("fsclish -c 'show signaling sctp-profile all'\n"); delay(3000); 
+
+ LOG_SQUARE("6.2- All Associations are ASP-ACTIVE"); delay(1000); 
+ send("fsclish -c 'show signaling ss7 association all'\n"); delay(5000); 
+ 
+ LOG_SQUARE("7.1- Signaling links distributed"); delay(1000); 
+ send("fsclish -c 'show signaling ss7 association all'\n"); delay(3000); 
+ 
+ LOG_SQUARE("7.2- Number of Signaling Links in Link Set"); delay(1000); 
+ send("fsclish -c 'show signaling ss7 link all'\n"); delay(3000); 
+
+ LOG_SQUARE("8.1- Used SCTP Parameter Set"); delay(1000); 
+ send("fsclish -c 'show signaling sctp-profile name H248'\n"); delay(3000); 
+ send("fsclish -c 'show signaling sctp-profile all'\n"); delay(3000);
+ 
+ LOG_SQUARE("8.2- VMGW configuration is distributed"); delay(1000); 
+ send("fsclish -c 'show vmgw mgw'\n"); delay(3000);
+ send("fsclish -c 'show vmgw mgw mod 0'\n"); delay(3000);
+ 
+ LOG_SQUARE("8.3- SCTP MODE = Standard H.248/SCTP functionality"); delay(1000); 
+ send("fsclish -c 'show vmgw mgw'\n"); delay(3000); 
+ send("fsclish -c 'show vmgw mgw mod 0'\n"); delay(3000);
+ 
+ LOG_SQUARE("8.4- Control Primary IP address is used"); delay(1000); 
+ send("fsclish -c 'show vmgw mgw'\n"); delay(3000);
+ send("fsclish -c 'show vmgw mgw mod 0'\n"); delay(3000);
+ 
+ LOG_SQUARE("10.1- The number of Circuits"); delay(1000); 
+ send("fsclish -c 'show tdm circuitgroup crct cgr cgr-num 1'\n"); delay(3000); 
+ 
+ LOG_SQUARE("10.4- SDH protection group"); delay(1000); 
+ send("fsclish -c 'show tdm sdh pgr' | grep -E 'protection group id|HW configured|request sent|condition'\n"); delay(3000);
+ send("fsclish -c 'show tdm sdh pgr'\n"); delay(3000);
+ 
+ LOG_SQUARE("11.1- All Announcements are created"); delay(1000); 
+ send("cd /var/opt/nokiasiemens/annfile/DESTINATION\n"); delay(1000); 
+ send("ls -lt\n"); delay(1000);
+ send("cd /var/opt/nokiasiemens/annfile/ORIGINAL/\n"); delay(1000); 
+ send("ls -lt\n"); delay(1000); 
+
+ LOG_SQUARE("11.2- All announcements should be loaded in TCU"); delay(1000); 
+ send("fsclish -c 'show announcement-and-tone announcement load ftyp vat fnbr 1-3999'\n"); pause(55); 
+ send("fsclish -c 'show announcement-and-tone announcement load ftyp vad fnbr 4-1002'\n"); pause(20); 
+
+ LOG_SQUARE("11.3- Tones are created"); delay(1000); 
+ send("fsclish -c 'show announcement-and-tone tone paratype 0'\n"); pause(3);  
+ send("fsclish -c 'show announcement-and-tone tone paratype 1'\n"); pause(3);  
+
+ LOG_SQUARE("12.1- Activate Measurements"); delay(1000); 
+ send("fsclish -c 'show stats obj-list all'\n"); delay(3000); 
+ send("fsclish -c 'show stats m-job all'\n"); delay(3000);
+ send("fsclish -c 'show stats t-job all'\n"); delay(3000);
+ 
+ LOG_SQUARE("13.1- Active alarms in MGW"); delay(1000); 
+ send("fsclish -c 'show alarm active-summary'\n"); delay(3000); 
+
+ print("FIN!!!!");
+ 
+ endfunction
+ 
+
+void function LOG_SQUARE(string information )
+ integer x,y=1; 
+ x = strlength(information); x= x + 4; 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor logprint("\n# %s #\n",information); 
+ for(y=1 ; y<=x ; y++) logprint("#"); endfor 
+ logprint("\n");
+endfunction
+
+void function PROMPT(string line)
+integer M=2;
+ while(1)
+  if(getline(line," '#' ")) 
+  delay(2000); 
+  break; 
+  else delay(M*1000); endif    
+ endwhile
+endfunction
+
+void function AHUB_VERSION(string AHUB)
+ string line;
+ send("telnet %s\n",AHUB); delay(1500); send("admin\r"); send("\r"); delay(1000); 
+ send("enable\n"); delay(1500); send("show version\n"); delay(2000);
+ if(getline(line," 'NOS version' ")) print("AHUB %s: %s",AHUB,line); endif
+ delay(1500); send("exit\n"); delay(1500);
+endfunction
+
+void function AHUB_REACHA(string AHUB)
+ string line;
+ send("telnet %s\n",AHUB); delay(1500); send("admin\r"); send("\r"); delay(1500); 
+ send("enable\n"); delay(1500); 
+ send("enable fi\n"); delay(1500);
+ send("\n"); delay(1500);
+ send("\n"); delay(2000);
+ send("exit\n"); delay(1000);
+ 
+endfunction
+
+void function TS_MGW_HW_0046(string AHUB)
+ string line;
+ send("telnet %s\n",AHUB); delay(1500); send("admin\r"); send("\r"); delay(1500); 
+ send("enable\n"); delay(1500); 
+ send("enable fi\n"); delay(1500);
+ send("show port\n"); delay(4000);
+ send("show port description\n"); delay(4000);
+ send("show port module-info\n"); delay(4000);
+ send("show port statistics avg\n"); delay(4000);
+ send("show sfp-info all\n"); delay(4000);
+ send("exit\n"); delay(1000);
+ 
+endfunction
+
+
